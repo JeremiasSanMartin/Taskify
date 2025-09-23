@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TASKIFY - Gestión de Tareas Gamificada</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- External CSS file instead of inline styles -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#home">
+                <div class="logo-icon">
+                    <i class="bi bi-star-fill"></i>
+                </div>
+                TASKIFY
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#features">Características</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#how-it-works">Cómo Funciona</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#contact">Contacto</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero-section">
+        <div class="container">
+            <div class="row justify-content-center align-items-center min-vh-100">
+                <div class="col-lg-5 col-md-7 col-sm-9">
+                    <div class="login-card">
+                        <div class="hero-logo">
+                            <i class="bi bi-star-fill"></i>
+                        </div>
+                        <h1 class="hero-title">Taskify</h1>
+                        <p class="hero-subtitle">
+                            Transforma tus tareas en una experiencia gamificada.
+                            Crea grupos, gana puntos y canjea recompensas.
+                        </p>
+                        <button class="google-login-btn" onclick="handleGoogleLogin()">
+                            <svg class="google-icon" viewBox="0 0 24 24">
+                                <path fill="#4285F4"
+                                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                                <path fill="#34A853"
+                                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                                <path fill="#FBBC05"
+                                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                                <path fill="#EA4335"
+                                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                            </svg>
+                            Iniciar sesión con Google
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features-section">
+        <div class="container">
+            <div class="row text-center mb-5">
+                <div class="col-lg-8 mx-auto">
+                    <h2 class="display-4 fw-bold mb-4 fade-in">Características Principales</h2>
+                    <p class="lead text-muted fade-in">Descubre todo lo que TASKIFY puede hacer por ti y tu equipo</p>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-4 col-md-6">
+                    <div class="feature-card fade-in">
+                        <div class="feature-icon">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                        <h3 class="feature-title">Gestión de Grupos</h3>
+                        <p class="feature-description">
+                            Crea grupos de trabajo, invita colaboradores y asigna roles de administrador.
+                            Organiza tu equipo de manera eficiente.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <div class="feature-card fade-in">
+                        <div class="feature-icon">
+                            <i class="bi bi-list-task"></i>
+                        </div>
+                        <h3 class="feature-title">Tareas Inteligentes</h3>
+                        <p class="feature-description">
+                            Crea, asigna y gestiona tareas con descripciones detalladas, fechas límite
+                            y sistema de aprobación automático.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <div class="feature-card fade-in">
+                        <div class="feature-icon">
+                            <i class="bi bi-trophy-fill"></i>
+                        </div>
+                        <h3 class="feature-title">Sistema de Puntos</h3>
+                        <p class="feature-description">
+                            Gana puntos por completar tareas, sube en los rankings semanales
+                            y desbloquea logros especiales.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <div class="feature-card fade-in">
+                        <div class="feature-icon">
+                            <i class="bi bi-gift-fill"></i>
+                        </div>
+                        <h3 class="feature-title">Recompensas</h3>
+                        <p class="feature-description">
+                            Canjea tus puntos por recompensas personalizadas. Los administradores
+                            pueden crear catálogos únicos para cada grupo.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <div class="feature-card fade-in">
+                        <div class="feature-icon">
+                            <i class="bi bi-bell-fill"></i>
+                        </div>
+                        <h3 class="feature-title">Notificaciones</h3>
+                        <p class="feature-description">
+                            Mantente al día con notificaciones en tiempo real sobre nuevas tareas,
+                            aprobaciones y cambios en el grupo.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <div class="feature-card fade-in">
+                        <div class="feature-icon">
+                            <i class="bi bi-graph-up"></i>
+                        </div>
+                        <h3 class="feature-title">Historial y Estadísticas</h3>
+                        <p class="feature-description">
+                            Consulta el historial completo de actividades, estadísticas de rendimiento
+                            y progreso del equipo.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How it Works Section -->
+    <section id="how-it-works" class="how-it-works">
+        <div class="container">
+            <div class="row text-center mb-5">
+                <div class="col-lg-8 mx-auto">
+                    <h2 class="display-4 fw-bold mb-4 fade-in">¿Cómo Funciona?</h2>
+                    <p class="lead text-muted fade-in">Comenzar con TASKIFY es muy sencillo</p>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-3 col-md-6">
+                    <div class="step-card fade-in">
+                        <div class="step-number">1</div>
+                        <h3 class="step-title">Regístrate</h3>
+                        <p class="text-muted">Inicia sesión con tu cuenta de Google de forma rápida y segura.</p>
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="step-card fade-in">
+                        <div class="step-number">2</div>
+                        <h3 class="step-title">Crea o Únete</h3>
+                        <p class="text-muted">Crea un nuevo grupo de trabajo o únete a uno existente con un código de
+                            invitación.</p>
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="step-card fade-in">
+                        <div class="step-number">3</div>
+                        <h3 class="step-title">Gestiona Tareas</h3>
+                        <p class="text-muted">Crea tareas, asígnalas a colaboradores y define puntos de recompensa.</p>
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="step-card fade-in">
+                        <div class="step-number">4</div>
+                        <h3 class="step-title">¡Gamifica!</h3>
+                        <p class="text-muted">Completa tareas, gana puntos, sube en rankings y canjea recompensas.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer id="contact" class="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-4">
+                    <div class="footer-brand">TASKIFY</div>
+                    <p class="text-muted">
+                        Transformando la gestión de tareas en una experiencia gamificada
+                        para equipos más productivos y motivados.
+                    </p>
+                </div>
+                <div class="col-lg-4">
+                    <h5 class="mb-3">Enlaces Rápidos</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#features" class="text-muted text-decoration-none">Características</a></li>
+                        <li><a href="#how-it-works" class="text-muted text-decoration-none">Cómo Funciona</a></li>
+                        <li><a href="#" class="text-muted text-decoration-none">Términos de Uso</a></li>
+                        <li><a href="#" class="text-muted text-decoration-none">Privacidad</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-4">
+                    <h5 class="mb-3">Contacto</h5>
+                    <p class="text-muted">
+                        <i class="bi bi-envelope me-2"></i>
+                        contacto@taskify.com
+                    </p>
+                    <p class="text-muted">
+                        <i class="bi bi-phone me-2"></i>
+                        +54 11 1234-5678
+                    </p>
+                </div>
+            </div>
+            <hr class="my-4">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <p class="text-muted mb-0">&copy; 2025 TASKIFY. Todos los derechos reservados.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="text-muted mb-0">Desarrollado por el equipo TASKIFY</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- External JavaScript file instead of inline script -->
+    <script src="script.js"></script>
+</body>
+
+</html>

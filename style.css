@@ -1,0 +1,411 @@
+:root {
+  --primary-color: #8b5fbf;
+  --secondary-color: #a855f7;
+  --accent-color: #fcd34d;
+  --gradient-start: #e879f9;
+  --gradient-end: #8b5fbf;
+  --dark-color: #1e293b;
+  --light-color: #f8fafc;
+  --card-bg: rgba(255, 255, 255, 0.95);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Poppins", sans-serif;
+  line-height: 1.6;
+  color: var(--dark-color);
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  min-height: 100vh;
+}
+
+/* Header Styles */
+.navbar {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.navbar-brand {
+  font-weight: 700;
+  font-size: 1.8rem;
+  color: var(--primary-color) !important;
+  display: flex;
+  align-items: center;
+}
+
+.logo-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  color: var(--accent-color);
+  font-size: 1.2rem;
+  /* Enhanced Bootstrap Icons rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-weight: 400;
+}
+
+/* Hero Section */
+.hero-section {
+  background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-section::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+  opacity: 0.6;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+}
+
+.login-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 50px 40px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  max-width: 400px;
+  margin: 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.hero-logo {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 30px;
+  color: var(--accent-color);
+  font-size: 2.5rem;
+  box-shadow: 0 10px 30px rgba(139, 95, 191, 0.3);
+  /* Enhanced Bootstrap Icons rendering for hero logo */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-weight: 400;
+}
+
+.hero-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+}
+
+.hero-subtitle {
+  font-size: 1.1rem;
+  color: #64748b;
+  margin-bottom: 2.5rem;
+  font-weight: 400;
+}
+
+.google-login-btn {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 16px 32px;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 500;
+  box-shadow: 0 8px 25px rgba(139, 95, 191, 0.3);
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 280px;
+}
+
+.google-login-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 35px rgba(139, 95, 191, 0.4);
+  color: white;
+  background: var(--secondary-color);
+}
+
+.google-icon {
+  width: 20px;
+  height: 20px;
+  /* Enhanced Google icon rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* Features Section */
+.features-section {
+  padding: 100px 0;
+  background: var(--light-color);
+}
+
+.feature-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 40px 30px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  height: 100%;
+}
+
+.feature-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+}
+
+.feature-icon {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 25px;
+  color: white;
+  font-size: 2rem;
+  box-shadow: 0 8px 25px rgba(139, 95, 191, 0.2);
+  /* Enhanced Bootstrap Icons rendering for feature icons */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-weight: 400;
+  /* Additional properties for crisp icon rendering */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Specific Bootstrap Icons optimization */
+.feature-icon i {
+  font-style: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-display: swap;
+  /* Force hardware acceleration for smoother rendering */
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.feature-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: var(--dark-color);
+}
+
+.feature-description {
+  color: #64748b;
+  line-height: 1.6;
+}
+
+/* How it works section */
+.how-it-works {
+  padding: 100px 0;
+  background: white;
+}
+
+.step-card {
+  text-align: center;
+  padding: 30px 20px;
+}
+
+.step-number {
+  width: 60px;
+  height: 60px;
+  background: var(--accent-color);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  color: var(--dark-color);
+  font-size: 1.5rem;
+  font-weight: 700;
+  box-shadow: 0 8px 25px rgba(252, 211, 77, 0.3);
+  /* Enhanced number rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.step-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: var(--dark-color);
+}
+
+/* Footer */
+.footer {
+  background: var(--dark-color);
+  color: white;
+  padding: 50px 0 30px;
+}
+
+.footer-brand {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 15px;
+}
+
+.footer p,
+.footer .text-muted {
+  color: white !important;
+}
+
+.footer h5 {
+  color: white;
+  font-weight: 600;
+}
+
+.footer a {
+  color: rgba(255, 255, 255, 0.8) !important;
+  transition: color 0.3s ease;
+}
+
+.footer a:hover {
+  color: white !important;
+}
+
+/* Enhanced footer icons rendering */
+.footer i {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  vertical-align: middle;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .hero-title {
+    font-size: 2rem;
+  }
+
+  .hero-subtitle {
+    font-size: 1rem;
+  }
+
+  .login-card {
+    padding: 40px 30px;
+    margin: 20px;
+  }
+
+  .google-login-btn {
+    padding: 14px 28px;
+    font-size: 0.95rem;
+  }
+
+  .feature-card {
+    margin-bottom: 30px;
+  }
+}
+
+/* Animations */
+.fade-in {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.6s ease;
+}
+
+.fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Loading animation for Google button */
+.loading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.loading::after {
+  content: "";
+  width: 16px;
+  height: 16px;
+  border: 2px solid white;
+  border-top: 2px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-left: 10px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Enhanced Bootstrap Icons global optimization */
+.bi {
+  font-style: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-display: swap;
+  /* Force hardware acceleration */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  /* Prevent subpixel rendering issues */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* Additional optimization for larger Bootstrap Icons */
+.bi::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: geometricPrecision;
+  shape-rendering: crispEdges;
+}
