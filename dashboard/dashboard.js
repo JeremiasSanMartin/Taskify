@@ -2,16 +2,12 @@
 document.addEventListener("DOMContentLoaded", () => {
   // Initialize dashboard
   initializeDashboard()
-
   handleSidebarNavigation()
-
-  // Handle responsive sidebar
   handleResponsiveSidebar()
 })
 
 function initializeDashboard() {
   console.log("[v0] Dashboard initialized")
-
   // Show groups section by default
   showSection("grupos")
 }
@@ -66,10 +62,6 @@ function showSection(sectionName) {
 
 function handleResponsiveSidebar() {
   // Add mobile menu toggle functionality
-  const sidebar = document.querySelector(".sidebar")
-  const mainContent = document.querySelector(".main-content")
-
-  // Create mobile menu button
   if (window.innerWidth <= 768) {
     createMobileMenuButton()
   }
@@ -79,6 +71,10 @@ function handleResponsiveSidebar() {
       createMobileMenuButton()
     } else {
       removeMobileMenuButton()
+      const sidebar = document.querySelector(".sidebar")
+      if (sidebar) {
+        sidebar.style.transform = "translateX(0px)"
+      }
     }
   })
 }
@@ -96,14 +92,15 @@ function createMobileMenuButton() {
         z-index: 1001;
         width: 44px;
         height: 44px;
-        background: #111111;
-        border: 1px solid #1f1f1f;
-        color: #ffffff;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(139, 92, 246, 0.2);
+        color: #8b5cf6;
         border-radius: 8px;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
+        backdrop-filter: blur(10px);
     `
 
   document.body.appendChild(mobileBtn)
@@ -140,7 +137,6 @@ document.addEventListener("click", (e) => {
 document.addEventListener("click", (e) => {
   if (e.target.closest(".logout-btn")) {
     console.log("[v0] Logout clicked")
-    // Here you would handle the logout process
     if (confirm("¿Estás seguro de que quieres cerrar sesión?")) {
       window.location.href = "../index.html"
     }
