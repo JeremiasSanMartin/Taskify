@@ -1,144 +1,149 @@
-// Dashboard JavaScript
-document.addEventListener("DOMContentLoaded", () => {
-  // Initialize dashboard
-  initializeDashboard()
-  handleSidebarNavigation()
-  handleResponsiveSidebar()
-})
+window.onload = function () {
+  // --- Inicializar Dashboard ---
+  inicializarDashboard();
+  manejarNavegacionSidebar();
+  manejarSidebarResponsivo();
 
-function initializeDashboard() {
-  console.log("[v0] Dashboard initialized")
-  // Show groups section by default
-  showSection("grupos")
+  // --- Interacciones con las tarjetas de grupo ---
+  document.addEventListener("click", (e) => {
+    let groupCard = e.target.closest(".group-card");
+    if (groupCard) {
+      let nombreGrupo = groupCard.querySelector(".group-name").textContent;
+      console.log(`[v1] Grupo seleccionado: ${nombreGrupo}`);
+      // Aquí se podría redirigir a la página de detalles del grupo
+    }
+  });
+
+  // --- Cierre de sesión ---
+  document.addEventListener("click", (e) => {
+    if (e.target.closest(".logout-btn")) {
+      console.log("[v1] Botón de cerrar sesión clickeado");
+      if (confirm("¿Estás seguro de que quieres cerrar sesión?")) {
+        window.location.href = "../index.html";
+      }
+    }
+  });
+};
+
+// --- Función: inicialización del dashboard ---
+function inicializarDashboard() {
+  console.log("[v1] Dashboard inicializado");
+  // Mostrar por defecto la sección de grupos
+  mostrarSeccion("grupos");
 }
 
-function handleSidebarNavigation() {
-  const menuItems = document.querySelectorAll(".menu-item[data-section]")
+// --- Función: navegación del sidebar ---
+function manejarNavegacionSidebar() {
+  let menuItems = document.querySelectorAll(".menu-item[data-section]");
 
   menuItems.forEach((item) => {
     item.addEventListener("click", (e) => {
-      e.preventDefault()
+      e.preventDefault();
 
-      // Remove active class from all menu items
-      menuItems.forEach((menuItem) => menuItem.classList.remove("active"))
+      // Quitar la clase activa de todos los ítems
+      menuItems.forEach((menuItem) => menuItem.classList.remove("active"));
 
-      // Add active class to clicked item
-      item.classList.add("active")
+      // Activar el ítem clickeado
+      item.classList.add("active");
 
-      // Get section to show
-      const section = item.getAttribute("data-section")
-      showSection(section)
+      // Obtener y mostrar la sección correspondiente
+      let seccion = item.getAttribute("data-section");
+      mostrarSeccion(seccion);
 
-      console.log(`[v0] Navigated to section: ${section}`)
-    })
-  })
+      console.log(`[v1] Navegación hacia la sección: ${seccion}`);
+    });
+  });
 }
 
-function showSection(sectionName) {
-  // Hide all sections
-  const sections = document.querySelectorAll(".content-section")
-  sections.forEach((section) => {
-    section.classList.remove("active")
-  })
+// --- Función: mostrar sección ---
+function mostrarSeccion(nombreSeccion) {
+  // Ocultar todas las secciones
+  let secciones = document.querySelectorAll(".content-section");
+  secciones.forEach((seccion) => {
+    seccion.classList.remove("active");
+  });
 
-  // Show selected section
-  const targetSection = document.getElementById(`${sectionName}-section`)
-  if (targetSection) {
-    targetSection.classList.add("active")
+  // Mostrar la sección seleccionada
+  let seccionDestino = document.getElementById(`${nombreSeccion}-section`);
+  if (seccionDestino) {
+    seccionDestino.classList.add("active");
   }
 
-  // Update page title based on section
-  const pageTitle = document.querySelector(".page-title")
-  const pageSubtitle = document.querySelector(".page-subtitle")
+  // Actualizar títulos de la página
+  let titulo = document.querySelector(".page-title");
+  let subtitulo = document.querySelector(".page-subtitle");
 
-  if (sectionName === "grupos") {
-    pageTitle.textContent = "Mis Grupos"
-    pageSubtitle.textContent = "Gestiona tus grupos y colaboraciones"
-  } else if (sectionName === "notificaciones") {
-    pageTitle.textContent = "Notificaciones"
-    pageSubtitle.textContent = "Mantente al día con las últimas actualizaciones"
+  if (nombreSeccion === "grupos") {
+    titulo.textContent = "Mis Grupos";
+    subtitulo.textContent = "Gestiona tus grupos y colaboraciones";
+  } else if (nombreSeccion === "notificaciones") {
+    titulo.textContent = "Notificaciones";
+    subtitulo.textContent = "Mantente al día con las últimas actualizaciones";
   }
 }
 
-function handleResponsiveSidebar() {
-  // Add mobile menu toggle functionality
+// --- Función: manejar sidebar responsivo ---
+function manejarSidebarResponsivo() {
   if (window.innerWidth <= 768) {
-    createMobileMenuButton()
+    crearBotonMenuMovil();
   }
 
   window.addEventListener("resize", () => {
     if (window.innerWidth <= 768) {
-      createMobileMenuButton()
+      crearBotonMenuMovil();
     } else {
-      removeMobileMenuButton()
-      const sidebar = document.querySelector(".sidebar")
+      eliminarBotonMenuMovil();
+      let sidebar = document.querySelector(".sidebar");
       if (sidebar) {
-        sidebar.style.transform = "translateX(0px)"
+        sidebar.style.transform = "translateX(0px)";
       }
     }
-  })
+  });
 }
 
-function createMobileMenuButton() {
-  if (document.querySelector(".mobile-menu-btn")) return
+// --- Función: crear botón del menú móvil ---
+function crearBotonMenuMovil() {
+  if (document.querySelector(".mobile-menu-btn")) return;
 
-  const mobileBtn = document.createElement("button")
-  mobileBtn.className = "mobile-menu-btn"
-  mobileBtn.innerHTML = '<i class="bi bi-list"></i>'
-  mobileBtn.style.cssText = `
-        position: fixed;
-        top: 20px;
-        left: 20px;
-        z-index: 1001;
-        width: 44px;
-        height: 44px;
-        background: rgba(255, 255, 255, 0.9);
-        border: 1px solid rgba(139, 92, 246, 0.2);
-        color: #8b5cf6;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        backdrop-filter: blur(10px);
-    `
+  let botonMovil = document.createElement("button");
+  botonMovil.className = "mobile-menu-btn";
+  botonMovil.innerHTML = '<i class="bi bi-list"></i>';
+  botonMovil.style.cssText = `
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1001;
+    width: 44px;
+    height: 44px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    color: #8b5cf6;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+  `;
 
-  document.body.appendChild(mobileBtn)
+  document.body.appendChild(botonMovil);
 
-  mobileBtn.addEventListener("click", () => {
-    const sidebar = document.querySelector(".sidebar")
-    const isOpen = sidebar.style.transform === "translateX(0px)"
+  botonMovil.addEventListener("click", () => {
+    let sidebar = document.querySelector(".sidebar");
+    let estaAbierto = sidebar.style.transform === "translateX(0px)";
 
-    if (isOpen) {
-      sidebar.style.transform = "translateX(-100%)"
+    if (estaAbierto) {
+      sidebar.style.transform = "translateX(-100%)";
     } else {
-      sidebar.style.transform = "translateX(0px)"
+      sidebar.style.transform = "translateX(0px)";
     }
-  })
+  });
 }
 
-function removeMobileMenuButton() {
-  const mobileBtn = document.querySelector(".mobile-menu-btn")
-  if (mobileBtn) {
-    mobileBtn.remove()
+// --- Función: eliminar botón del menú móvil ---
+function eliminarBotonMenuMovil() {
+  let botonMovil = document.querySelector(".mobile-menu-btn");
+  if (botonMovil) {
+    botonMovil.remove();
   }
 }
-
-// Group card interactions
-document.addEventListener("click", (e) => {
-  if (e.target.closest(".group-card")) {
-    const groupCard = e.target.closest(".group-card")
-    const groupName = groupCard.querySelector(".group-name").textContent
-    console.log(`[v0] Clicked on group: ${groupName}`)
-    // Here you would navigate to the group details page
-  }
-})
-
-document.addEventListener("click", (e) => {
-  if (e.target.closest(".logout-btn")) {
-    console.log("[v0] Logout clicked")
-    if (confirm("¿Estás seguro de que quieres cerrar sesión?")) {
-      window.location.href = "../index.html"
-    }
-  }
-})
