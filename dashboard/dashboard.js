@@ -3,16 +3,7 @@ window.onload = function () {
   inicializarDashboard();
   manejarNavegacionSidebar();
   manejarSidebarResponsivo();
-
-  // --- Interacciones con las tarjetas de grupo ---
-  document.addEventListener("click", (e) => {
-    let groupCard = e.target.closest(".group-card");
-    if (groupCard) {
-      let nombreGrupo = groupCard.querySelector(".group-name").textContent;
-      console.log(`[v1] Grupo seleccionado: ${nombreGrupo}`);
-      // Aquí se podría redirigir a la página de detalles del grupo
-    }
-  });
+  handleGroupCards();
 
   // --- Cierre de sesión ---
   document.addEventListener("click", (e) => {
@@ -146,4 +137,14 @@ function eliminarBotonMenuMovil() {
   if (botonMovil) {
     botonMovil.remove();
   }
+}
+
+// --- Función: para redirigir al grupo --- esto debe modificarse al añadir back
+function handleGroupCards() {
+  document.addEventListener("click", (e) => {
+    const card = e.target.closest(".group-card");
+    if (!card) return;
+    const id = card.dataset.groupId || "demo";
+    window.location.href = `group.html?id=${encodeURIComponent(id)}`;
+  });
 }
