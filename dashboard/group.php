@@ -1,3 +1,18 @@
+<?php
+session_start();
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+
+// Verificar sesión
+if (!isset($_SESSION['name']) || !isset($_SESSION['email'])) {
+    header("Location: ../index.html");
+    exit();
+}
+
+$userName = htmlspecialchars($_SESSION['name']);
+$userEmail = htmlspecialchars($_SESSION['email']);
+?>
 <!DOCTYPE html>
 <html lang="es">
 
@@ -31,6 +46,10 @@
 
         <!-- Menú del grupo -->
         <div class="sidebar-menu">
+            <a href="index.php" class="menu-item external" data-external="true">
+                <i class="bi bi-arrow-left-circle"></i>
+                <span>Volver al Dashboard</span>
+            </a>
             <a href="#" class="menu-item active" data-section="miembros">
                 <i class="bi bi-people"></i>
                 <span>Miembros</span>
@@ -61,12 +80,12 @@
         <div class="sidebar-footer">
             <div class="user-profile">
                 <div class="user-info">
-                    <div class="user-name">Usuario</div>
-                    <div class="user-email">usuario@email.com</div>
+                    <div class="user-name"><?= $userName ?></div>
+                    <div class="user-email"><?= $userEmail ?></div>
                 </div>
-                <button class="logout-btn" title="Cerrar sesión">
+                <a href="../logout.php" class="logout-btn" title="Cerrar sesión">
                     <i class="bi bi-box-arrow-right"></i>
-                </button>
+                </a>
             </div>
         </div>
     </nav>

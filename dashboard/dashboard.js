@@ -145,6 +145,6 @@ function handleGroupCards() {
     const card = e.target.closest(".group-card");
     if (!card) return;
     const id = card.dataset.groupId || "demo";
-    window.location.href = `group.html?id=${encodeURIComponent(id)}`;
+    window.location.href = `group.php?id=${encodeURIComponent(id)}`;
   });
 }

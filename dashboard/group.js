@@ -10,13 +10,25 @@ function handleSidebarNavigation() {
     const sections = document.querySelectorAll(".content-section");
 
     menuItems.forEach(item => {
-        item.addEventListener("click", e => {
-            e.preventDefault();
+        item.addEventListener("click", (e) => {
+            // Si el item está marcado como externo → permitir comportamiento por defecto (navegación)
+            const isExternal = item.dataset.external === "true" || item.classList.contains("external");
+            if (isExternal) {
+                return; // no preventDefault -> navegamos normalmente
+            }
+
+            e.preventDefault(); // sólo evitamos navegación para items internos
+            // resetear clases
             menuItems.forEach(i => i.classList.remove("active"));
             sections.forEach(s => s.classList.remove("active"));
+
+            // activar el actual
             item.classList.add("active");
             const target = item.dataset.section;
-            document.getElementById(`${target}-section`).classList.add("active");
+            if (target) {
+                const el = document.getElementById(`${target}-section`);
+                if (el) el.classList.add("active");
+            }
         });
     });
 }
