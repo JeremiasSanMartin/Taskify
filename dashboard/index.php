@@ -1,20 +1,38 @@
+<?php
+session_start();
+
+// Evitar que el navegador guarde en caché
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+
+// Si no hay sesión activa, redirigir al login
+if (!isset($_SESSION['name']) || !isset($_SESSION['email'])) {
+    header("Location: ../index.html");
+    exit();
+}
+
+$userName  = htmlspecialchars($_SESSION['name']);
+$userEmail = htmlspecialchars($_SESSION['email']);
+?>
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - TASKIFY</title>
-    
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
     <!-- Dashboard CSS -->
     <link rel="stylesheet" href="dashboard.css">
 </head>
+
 <body class="dashboard-body">
     <!-- Sidebar -->
     <nav class="sidebar">
@@ -24,7 +42,7 @@
                 <span>TASKIFY</span>
             </div>
         </div>
-        
+
         <!-- Sidebar menu -->
         <div class="sidebar-menu">
             <a href="#" class="menu-item active" data-section="grupos">
@@ -36,16 +54,16 @@
                 <span>Notificaciones</span>
             </a>
         </div>
-        
+
         <div class="sidebar-footer">
             <div class="user-profile">
                 <div class="user-info">
-                    <div class="user-name">Usuario</div>
-                    <div class="user-email">usuario@email.com</div>
+                    <div class="user-name"><?= $userName ?></div>
+                    <div class="user-email"><?= $userEmail ?></div>
                 </div>
-                <button class="logout-btn" title="Cerrar sesión">
+                <a href="../logout.php" class="logout-btn" title="Cerrar sesión">
                     <i class="bi bi-box-arrow-right"></i>
-                </button>
+                </a>
             </div>
         </div>
     </nav>
@@ -92,7 +110,7 @@
                                 <div class="group-members">4 miembros</div>
                             </div>
                         </div>
-                        
+
                         <div class="group-card laboral" data-group-id="2">
                             <div class="group-icon">
                                 <i class="bi bi-briefcase-fill"></i>
@@ -103,7 +121,7 @@
                                 <div class="group-members">8 miembros</div>
                             </div>
                         </div>
-                        
+
                         <div class="group-card individual" data-group-id="3">
                             <div class="group-icon">
                                 <i class="bi bi-person-fill"></i>
@@ -134,7 +152,7 @@
                                 <div class="group-members">6 miembros</div>
                             </div>
                         </div>
-                        
+
                         <div class="group-card familia" data-group-id="5">
                             <div class="group-icon">
                                 <i class="bi bi-house-heart-fill"></i>
@@ -145,7 +163,7 @@
                                 <div class="group-members">7 miembros</div>
                             </div>
                         </div>
-                        
+
                         <div class="group-card laboral" data-group-id="6">
                             <div class="group-icon">
                                 <i class="bi bi-briefcase-fill"></i>
@@ -177,23 +195,25 @@
                                 <div class="notification-time">Hace 5 minutos</div>
                             </div>
                         </div>
-                        
+
                         <div class="notification-item unread">
                             <div class="notification-icon">
                                 <i class="bi bi-check-circle-fill"></i>
                             </div>
                             <div class="notification-content">
-                                <div class="notification-text">Carlos completó "Diseño de interfaz" en Proyecto Alpha</div>
+                                <div class="notification-text">Carlos completó "Diseño de interfaz" en Proyecto Alpha
+                                </div>
                                 <div class="notification-time">Hace 1 hora</div>
                             </div>
                         </div>
-                        
+
                         <div class="notification-item">
                             <div class="notification-icon">
                                 <i class="bi bi-plus-circle-fill"></i>
                             </div>
                             <div class="notification-content">
-                                <div class="notification-text">Nueva tarea asignada en "Mi Familia": Comprar víveres</div>
+                                <div class="notification-text">Nueva tarea asignada en "Mi Familia": Comprar víveres
+                                </div>
                                 <div class="notification-time">Hace 2 horas</div>
                             </div>
                         </div>
@@ -208,4 +228,5 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="dashboard.js"></script>
 </body>
+
 </html>
