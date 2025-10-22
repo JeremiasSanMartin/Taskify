@@ -1,5 +1,5 @@
 /vendor/
 /.env
 .DS_Store
-composer.json
-composer.lock
+/composer.json
+/composer.lock
