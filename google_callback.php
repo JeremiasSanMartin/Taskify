@@ -50,12 +50,22 @@ try {
     exit;
 }
 
-// Guardar en sesión
-$_SESSION['user_id'] = $googleUser->id;
-$_SESSION['name'] = $googleUser->name;
-$_SESSION['email'] = $googleUser->email;
-$_SESSION['picture'] = $googleUser->picture;
+$email = $googleUser->email;
+$_SESSION['email'] = $email;
 
-// Redirigir al dashboard
-header('Location: dashboard/index.php');
+// Verificar si el usuario ya existe en la BD
+require_once 'connection.php';
+$stmt = $conn->prepare("SELECT * FROM usuario WHERE email = :email");
+$stmt->execute([':email' => $email]);
+$user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if ($user) {
+    // Ya existe → guardar datos en sesión y redirigir al dashboard
+    $_SESSION['nombre'] = $user['nombre'];
+    $_SESSION['fecha_nacimiento'] = $user['fecha_nacimiento'];
+    header("Location: dashboard/index.php");
+} else {
+    // Nuevo usuario → redirigir a completar perfil
+    header("Location: complete_profile.php");
+}
 exit;

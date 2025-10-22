@@ -7,12 +7,12 @@ header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
 // Si no hay sesión activa, redirigir al login
-if (!isset($_SESSION['name']) || !isset($_SESSION['email'])) {
-    header("Location: ../index.html");
+if (!isset($_SESSION['nombre']) || !isset($_SESSION['email'])) {
+    header("Location: ../index.html"); 
     exit();
 }
 
-$userName  = htmlspecialchars($_SESSION['name']);
+$userName  = htmlspecialchars($_SESSION['nombre']);
 $userEmail = htmlspecialchars($_SESSION['email']);
 ?>
 <!DOCTYPE html>
