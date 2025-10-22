@@ -14,9 +14,6 @@ try {
     // Configurar atributos de error
     $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // Opcional: mensaje de conexión exitosa (podés comentar esto)
-    echo "Conexión a la base de datos establecida correctamente.";
-
 } catch (PDOException $e) {
     // Si hay error, mostrar mensaje
     die("Error de conexión: " . $e->getMessage());
