@@ -53,9 +53,9 @@ try {
 $email = $googleUser->email;
 $_SESSION['email'] = $email;
 
-// Verificar si el usuario ya existe en la BD
+// Verificar si el usuario ya existe usando stored procedure
 require_once 'connection.php';
-$stmt = $conn->prepare("SELECT * FROM usuario WHERE email = :email");
+$stmt = $conn->prepare("CALL sp_usuario_existe(:email)");
 $stmt->execute([':email' => $email]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 

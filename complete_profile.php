@@ -20,8 +20,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!preg_match("/^[a-zA-ZÀ-ÿ\s]+$/u", $nombre)) {
         $error = "El nombre solo puede contener letras y espacios.";
     } else {
-        // Insertar en la base de datos
-        $stmt = $conn->prepare("INSERT INTO usuario (nombre, email, fecha_nacimiento) VALUES (:nombre, :email, :fecha_nacimiento)");
+        // Insertar usando stored procedure
+        $stmt = $conn->prepare("CALL sp_insert_usuario(:nombre, :email, :fecha_nacimiento)");
         $stmt->execute([
             ':nombre' => $nombre,
             ':email' => $email,
