@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
     handleSidebarNavigation();
     manejarSidebarResponsivo();
+    configurarModalExpulsion();
 });
 
 // --- Navegación lateral ---
@@ -77,4 +78,18 @@ function manejarSidebarResponsivo() {
 
     ajustarSidebar();
     window.addEventListener("resize", ajustarSidebar);
+}
+
+function configurarModalExpulsion() {
+    const expulsarModal = document.getElementById("expulsarModal");
+    if (!expulsarModal) return;
+
+    expulsarModal.addEventListener("show.bs.modal", function (event) {
+        const button = event.relatedTarget;
+        const nombre = button.getAttribute("data-nombre");
+        const idUsuario = button.getAttribute("data-id");
+
+        document.getElementById("nombreMiembro").textContent = nombre;
+        document.getElementById("idUsuarioExpulsar").value = idUsuario;
+    });
 }

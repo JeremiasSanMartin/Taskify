@@ -47,10 +47,10 @@ $total_miembros = $stmt->fetchColumn();
 
 // Obtenemos los datos reales de los miembros
 $stmt = $conn->prepare("
-    SELECT u.nombre, gu.rol
+    SELECT u.id_usuario, u.nombre, gu.rol
     FROM grupousuario gu
     JOIN usuario u ON gu.usuario_id = u.id_usuario
-    WHERE gu.grupo_id = :id
+    WHERE gu.grupo_id = :id AND gu.estado = 1
 ");
 $stmt->execute([':id' => $id_grupo]);
 $miembros = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -140,9 +140,10 @@ $userName = htmlspecialchars($_SESSION['nombre']);
                     <div class="user-name"><?= $userName ?></div>
                     <div class="user-email"><?= $userEmail ?></div>
                 </div>
-                <a href="../logout.php" class="logout-btn" title="Cerrar sesión">
+                <button class="logout-btn btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#logoutModal"
+                    title="Cerrar sesión">
                     <i class="bi bi-box-arrow-right"></i>
-                </a>
+                </button>
             </div>
         </div>
     </nav>
@@ -189,7 +190,9 @@ $userName = htmlspecialchars($_SESSION['nombre']);
                                     <?php echo $miembro['rol'] === 'administrador' ? '(Admin)' : ''; ?>
                                     <?php if ($isAdmin && $miembro['rol'] !== 'administrador'): ?>
                                         <button class="btn btn-sm btn-outline-danger remove-member-btn admin-only"
-                                            title="Echar del grupo">
+                                            data-bs-toggle="modal" data-bs-target="#expulsarModal"
+                                            data-nombre="<?php echo htmlspecialchars($miembro['nombre']); ?>"
+                                            data-id="<?php echo $miembro['id_usuario']; ?>">
                                             <i class="bi bi-person-x"></i>
                                         </button>
                                     <?php endif; ?>
@@ -388,6 +391,45 @@ $userName = htmlspecialchars($_SESSION['nombre']);
         </div>
     </div>
 
+    <!-- Modal Expulsar Miembro -->
+    <div class="modal fade" id="expulsarModal" tabindex="-1" aria-labelledby="expulsarLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <form action="expulsar_miembro.php" method="POST" class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="expulsarLabel">Confirmar expulsión</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    ¿Estás seguro que querés expulsar a <strong id="nombreMiembro"></strong> del grupo?
+                    <input type="hidden" name="id_usuario" id="idUsuarioExpulsar">
+                    <input type="hidden" name="id_grupo" value="<?php echo $id_grupo; ?>">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Expulsar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Cerrar Sesión -->
+    <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="logoutLabel">¿Cerrar sesión?</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    ¿Estás seguro que querés cerrar sesión?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <a href="../../logout.php" class="btn btn-danger">Cerrar sesión</a>
+                </div>
+            </div>
+        </div>
+    </div>
 
 </body>
 
