@@ -20,15 +20,16 @@ require_once '../connection.php';
 $usuario_id = $_SESSION['id_usuario'] ?? null;
 $grupos_propios = [];
 
-if ($usuario_id) {
+if ($userEmail) {
     $stmt = $conn->prepare("
         SELECT g.id_grupo, g.nombre, g.tipo,
                (SELECT COUNT(*) FROM grupousuario WHERE grupo_id = g.id_grupo) AS miembros
         FROM grupo g
         JOIN grupousuario gu ON gu.grupo_id = g.id_grupo
-        WHERE gu.usuario_id = :usuario_id AND gu.rol = 'administrador'
+        JOIN usuario u ON gu.usuario_id = u.id_usuario
+        WHERE u.email = :email AND gu.rol = 'administrador'
     ");
-    $stmt->execute([':usuario_id' => $usuario_id]);
+    $stmt->execute([':email' => $userEmail]);
     $grupos_propios = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 ?>
@@ -145,7 +146,7 @@ if ($usuario_id) {
                                 $categoria = ucfirst($tipo);
                                 $miembros = $grupo['miembros'] === 1 ? 'Solo yo' : $grupo['miembros'] . ' miembros';
                                 ?>
-                                <a href="../administrador/grupo/ver_grupo.php?id=<?php echo $grupo['id_grupo']; ?>"
+                                <a href="/Taskify/administrador/grupo/ver_grupo.php?id=<?php echo $grupo['id_grupo']; ?>"
                                     class="group-card <?php echo $tipo; ?>" data-group-id="<?php echo $grupo['id_grupo']; ?>">
                                     <div class="group-icon">
                                         <i class="bi <?php echo $icono; ?>"></i>
