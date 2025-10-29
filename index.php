@@ -8,14 +8,14 @@ header("Pragma: no-cache");
 
 // Si no hay sesión activa, redirigir al login
 if (!isset($_SESSION['nombre']) || !isset($_SESSION['email'])) {
-    header("Location: ../index.html");
+    header("Location: index.html");
     exit();
 }
 
 $userName = htmlspecialchars($_SESSION['nombre']);
 $userEmail = htmlspecialchars($_SESSION['email']);
 
-require_once '../connection.php';
+require_once 'includes/connection.php';
 
 $usuario_id = $_SESSION['id_usuario'] ?? null;
 $grupos_propios = [];
@@ -49,7 +49,7 @@ if ($userEmail) {
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Dashboard CSS -->
-    <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="assets/css/dashboard.css">
 </head>
 
 <body class="dashboard-body">
@@ -115,7 +115,7 @@ if ($userEmail) {
                     <i class="bi bi-person-plus"></i>
                     Unirse a Grupo
                 </button>
-                <a href="../administrador/grupo/crear_grupo.php" class="btn btn-primary">
+                <a href="administrador/grupo/crear_grupo.php" class="btn btn-primary">
                     <i class="bi bi-plus-lg"></i>
                     Crear Grupo
                 </a>
@@ -148,7 +148,7 @@ if ($userEmail) {
                                 $categoria = ucfirst($tipo);
                                 $miembros = $grupo['miembros'] === 1 ? 'Solo yo' : $grupo['miembros'] . ' miembros';
                                 ?>
-                                <a href="/Taskify/administrador/grupo/ver_grupo.php?id=<?php echo $grupo['id_grupo']; ?>"
+                                <a href="administrador/grupo/ver_grupo.php?id=<?php echo $grupo['id_grupo']; ?>"
                                     class="group-card <?php echo $tipo; ?>" data-group-id="<?php echo $grupo['id_grupo']; ?>">
                                     <div class="group-icon">
                                         <i class="bi <?php echo $icono; ?>"></i>
@@ -267,7 +267,7 @@ if ($userEmail) {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <a href="../logout.php" class="btn btn-danger">Cerrar sesión</a>
+                    <a href="auth/logout.php" class="btn btn-danger">Cerrar sesión</a>
                 </div>
             </div>
         </div>
@@ -275,7 +275,7 @@ if ($userEmail) {
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="dashboard.js"></script>
+    <script src="assets/js/dashboard.js"></script>
 </body>
 
 </html>

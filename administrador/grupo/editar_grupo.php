@@ -1,9 +1,9 @@
 <?php
 session_start();
-require_once '../../connection.php';
+require_once '../../includes/connection.php';
 
 if (!isset($_SESSION['email']) || !isset($_POST['id_grupo'])) {
-    header("Location: ../dashboard/index.php");
+    header("Location: ../../index.php");
     exit();
 }
 

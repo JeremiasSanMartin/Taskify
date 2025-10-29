@@ -2,7 +2,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 session_start();
 
 // Cargar variables de entorno
@@ -54,7 +54,7 @@ $email = $googleUser->email;
 $_SESSION['email'] = $email;
 
 // Verificar si el usuario ya existe usando stored procedure
-require_once 'connection.php';
+require_once __DIR__ . '/../includes/connection.php';
 $stmt = $conn->prepare("CALL sp_usuario_existe(:email)");
 $stmt->execute([':email' => $email]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -63,7 +63,7 @@ if ($user) {
     // Ya existe → guardar datos en sesión y redirigir al dashboard
     $_SESSION['nombre'] = $user['nombre'];
     $_SESSION['fecha_nacimiento'] = $user['fecha_nacimiento'];
-    header("Location: dashboard/index.php");
+    header("Location: ../index.php");
 } else {
     // Nuevo usuario → redirigir a completar perfil
     header("Location: complete_profile.php");

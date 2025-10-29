@@ -6,11 +6,11 @@ header("Pragma: no-cache");
 
 // Verificar sesión
 if (!isset($_SESSION['nombre']) || !isset($_SESSION['email'])) {
-    header("Location: /Taskify/dashboard/index.php");
+    header("Location: /Taskify/index.php");
     exit();
 }
 
-require_once '../../connection.php';
+require_once '../../includes/connection.php';
 
 $id_grupo = $_GET['id'] ?? null;
 $userEmail = $_SESSION['email'] ?? null;
@@ -84,9 +84,9 @@ $userName = htmlspecialchars($_SESSION['nombre']);
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Dashboard base styles -->
-    <link rel="stylesheet" href="../../dashboard/dashboard.css">
+    <link rel="stylesheet" href="../../assets/css/dashboard.css">
     <!-- Overrides para group -->
-    <link rel="stylesheet" href="group.css">
+    <link rel="stylesheet" href="../../assets/css/group.css">
 </head>
 
 <body class="dashboard-body">
@@ -103,7 +103,7 @@ $userName = htmlspecialchars($_SESSION['nombre']);
 
         <!-- Menú del grupo -->
         <div class="sidebar-menu">
-            <a href="../../dashboard/index.php" class="menu-item external" data-external="true">
+            <a href="../../index.php" class="menu-item external" data-external="true">
                 <i class="bi bi-arrow-left-circle"></i>
                 <span>Volver al Dashboard</span>
             </a>
@@ -327,7 +327,7 @@ $userName = htmlspecialchars($_SESSION['nombre']);
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="group.js"></script>
+    <script src="../../assets/js/group.js"></script>
 
     <!-- Modal Eliminar Grupo -->
     <div class="modal fade" id="eliminarGrupoModal" tabindex="-1" aria-labelledby="eliminarGrupoLabel"
@@ -425,7 +425,7 @@ $userName = htmlspecialchars($_SESSION['nombre']);
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <a href="../../logout.php" class="btn btn-danger">Cerrar sesión</a>
+                    <a href="../../auth/logout.php" class="btn btn-danger">Cerrar sesión</a>
                 </div>
             </div>
         </div>

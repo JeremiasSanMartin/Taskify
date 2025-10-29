@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once '../../connection.php';
+require_once '../../includes/connection.php';
 
 if (!isset($_SESSION['email']) || !isset($_POST['id_grupo']) || !isset($_POST['id_usuario'])) {
     echo "Datos incompletos.";

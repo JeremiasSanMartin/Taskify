@@ -1,9 +1,9 @@
 <?php
 session_start();
-require_once '../../connection.php';
+require_once '../../includes/connection.php';
 
 if (!isset($_SESSION['email']) || !isset($_POST['id_grupo'])) {
-    header("Location: ../dashboard/index.php");
+    header("Location: ../../index.php");
     exit();
 }
 
@@ -30,6 +30,6 @@ $conn->prepare("DELETE FROM grupousuario WHERE grupo_id = :id")->execute([':id' 
 $conn->prepare("DELETE FROM tarea WHERE grupo_id = :id")->execute([':id' => $id_grupo]);
 $conn->prepare("DELETE FROM grupo WHERE id_grupo = :id")->execute([':id' => $id_grupo]);
 
-header("Location: ../../dashboard/index.php");
+header("Location: ../../index.php");
 exit();
 ?>

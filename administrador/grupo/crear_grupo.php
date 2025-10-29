@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once '../../connection.php';
+require_once '../../includes/connection.php';
 
 if (!isset($_SESSION['email'])) {
     header("Location: ../../index.php");
@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['grupo_creado'] = true;
             $_SESSION['codigo_invitacion'] = $codigo_invitacion;
 
-            header("Location: ../../dashboard/index.php");
+            header("Location: ../../index.php");
             exit;
         } catch (PDOException $e) {
             $error = "Error al crear el grupo. Intentá nuevamente.";
@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <title>Crear Grupo - TASKIFY</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="../../style.css" rel="stylesheet">
+    <link href="../../assets/css/style.css" rel="stylesheet">
 </head>
 
 <body>
