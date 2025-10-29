@@ -36,15 +36,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = "No se pudo identificar al usuario.";
     } else {
         try {
-            $stmt = $conn->prepare("CALL sp_crear_grupo(:nombre, :tipo, :descripcion, :codigo_invitacion, :usuario_id, :fecha_creacion)");
-            $stmt->execute([
+            $conn->beginTransaction();
+
+            // 1. Insertar el grupo
+            $stmtGrupo = $conn->prepare("
+                INSERT INTO grupo (nombre, tipo, descripcion, codigo_invitacion)
+                VALUES (:nombre, :tipo, :descripcion, :codigo_invitacion)
+            ");
+            $stmtGrupo->execute([
                 ':nombre' => $nombre,
                 ':tipo' => $tipo,
                 ':descripcion' => $descripcion,
-                ':codigo_invitacion' => $codigo_invitacion,
-                ':usuario_id' => $usuario_id,
-                ':fecha_creacion' => $fecha_creacion
+                ':codigo_invitacion' => $codigo_invitacion
             ]);
+
+            // 2. Obtener el ID del grupo recién creado
+            $nuevo_grupo_id = $conn->lastInsertId();
+
+            // 3. Insertar al creador como administrador
+            $stmtUsuario = $conn->prepare("
+                INSERT INTO grupousuario (usuario_id, grupo_id, rol, fecha_ingreso, estado, puntos)
+                VALUES (:usuario_id, :grupo_id, 'administrador', :fecha_ingreso, 1, 0)
+            ");
+            $stmtUsuario->execute([
+                ':usuario_id' => $usuario_id,
+                ':grupo_id' => $nuevo_grupo_id,
+                ':fecha_ingreso' => $fecha_creacion
+            ]);
+
+            $conn->commit();
 
             $_SESSION['grupo_creado'] = true;
             $_SESSION['codigo_invitacion'] = $codigo_invitacion;
@@ -52,6 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header("Location: ../../index.php");
             exit;
         } catch (PDOException $e) {
+            $conn->rollBack();
             $error = "Error al crear el grupo. Intentá nuevamente.";
         }
     }
