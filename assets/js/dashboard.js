@@ -5,15 +5,6 @@ window.onload = function () {
   manejarSidebarResponsivo();
   handleGroupCards();
 
-  // --- Cierre de sesión ---
-  document.addEventListener("click", (e) => {
-    if (e.target.closest(".logout-btn")) {
-      console.log("[v1] Botón de cerrar sesión clickeado");
-      if (confirm("¿Estás seguro de que quieres cerrar sesión?")) {
-        window.location.href = "../index.html";
-      }
-    }
-  });
 };
 
 // --- Función: inicialización del dashboard ---
