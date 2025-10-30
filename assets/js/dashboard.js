@@ -130,12 +130,11 @@ function eliminarBotonMenuMovil() {
   }
 }
 
-// --- Función: para redirigir al grupo --- esto debe modificarse al añadir back
 function handleGroupCards() {
   document.addEventListener("click", (e) => {
     const card = e.target.closest(".group-card");
     if (!card) return;
-    const id = card.dataset.groupId || "demo";
-    window.location.href = `group.php?id=${encodeURIComponent(id)}`;
+    const id = card.dataset.groupId;
+    window.location.href = `/Taskify/colaborador/grupo/ver_grupo.php?id=${encodeURIComponent(id)}`;
   });
 }
