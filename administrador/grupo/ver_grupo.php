@@ -30,6 +30,11 @@ if (!$usuario_id) {
     exit();
 }
 
+//obtener rol del usuario en este grupo
+$stmt = $conn->prepare("SELECT rol FROM grupousuario WHERE grupo_id = :gid AND usuario_id = :uid");
+$stmt->execute([':gid' => $id_grupo, ':uid' => $usuario_id]);
+$rol = $stmt->fetchColumn();
+
 // Obtener datos del grupo
 $stmt = $conn->prepare("SELECT nombre, tipo FROM grupo WHERE id_grupo = :id");
 $stmt->execute([':id' => $id_grupo]);
@@ -64,7 +69,64 @@ $stmt->execute([':id' => $id_grupo, ':uid' => $usuario_id]);
 $rol_usuario = $stmt->fetchColumn();
 $isAdmin = ($rol_usuario === 'administrador');
 
+//obtener tareas
 $userName = htmlspecialchars($_SESSION['nombre']);
+
+$tareas = [];
+
+if ($id_grupo) {
+    try {
+        $stmt = $conn->prepare("
+        SELECT t.id_tarea, t.titulo, t.descripcion, t.puntos, t.fecha_limite,
+               u.nombre AS asignado
+        FROM tarea t
+        LEFT JOIN usuario u ON t.asignadoA = u.id_usuario
+        WHERE t.grupo_id = :grupo_id AND t.estado = 'pendiente'
+        ORDER BY t.fecha_limite ASC
+        ");
+        $stmt->bindParam(':grupo_id', $id_grupo, PDO::PARAM_INT);
+        $stmt->execute();
+        $tareas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        echo "<p>Error al obtener tareas: " . $e->getMessage() . "</p>";
+    }
+}
+
+//tareas realizadas
+$tareas_realizadas = [];
+
+if ($id_grupo) {
+    try {
+        $stmt = $conn->prepare("
+        SELECT t.id_tarea, t.titulo, t.descripcion, t.puntos, 
+                t.fecha_limite, t.fecha_entrega, 
+                u.nombre AS asignado
+        FROM tarea t
+        LEFT JOIN usuario u ON t.asignadoA = u.id_usuario
+        WHERE t.grupo_id = :grupo_id AND t.estado = 'realizada'
+        ORDER BY t.fecha_entrega DESC, t.fecha_limite ASC
+        ");
+        $stmt->bindParam(':grupo_id', $id_grupo, PDO::PARAM_INT);
+        $stmt->execute();
+        $tareas_realizadas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        echo "<p class='text-danger'>Error al obtener tareas realizadas: " . htmlspecialchars($e->getMessage()) . "</p>";
+    }
+}
+
+//ver historial de tareas
+$stmt = $conn->prepare("
+    SELECT h.id_historialGrupoUsuario, h.fecha, h.puntosOtorgados, h.puntosCanjeados, h.estadoTarea,
+       u.nombre AS usuario, t.titulo AS tarea
+FROM historialgrupousuario h
+LEFT JOIN grupousuario gu ON h.grupo_usuario_id = gu.id_grupo_usuario
+LEFT JOIN usuario u ON gu.usuario_id = u.id_usuario
+LEFT JOIN tarea t ON h.tarea_id_tarea = t.id_tarea
+WHERE gu.grupo_id = :grupo_id
+ORDER BY h.fecha DESC, h.id_historialGrupoUsuario DESC
+");
+$stmt->execute([':grupo_id' => $id_grupo]);
+$historial = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 
@@ -89,7 +151,7 @@ $userName = htmlspecialchars($_SESSION['nombre']);
     <link rel="stylesheet" href="../../assets/css/group.css">
 </head>
 
-<body class="dashboard-body">
+<body class="dashboard-body" >
 
 
     <!-- Sidebar -->
@@ -123,13 +185,13 @@ $userName = htmlspecialchars($_SESSION['nombre']);
                 <i class="bi bi-clock-history"></i>
                 <span>Historial</span>
             </a>
-            <a href="#" class="menu-item" data-section="configuracion">
-                <i class="bi bi-gear-fill"></i>
-                <span>Configuración</span>
-            </a>
             <a href="#" class="menu-item" data-section="aprobar-tareas">
                 <i class="bi bi-check2-square"></i>
                 <span>Aprobar Tareas</span>
+            </a>
+            <a href="#" class="menu-item" data-section="configuracion">
+                <i class="bi bi-gear-fill"></i>
+                <span>Configuración</span>
             </a>
         </div>
 
@@ -208,39 +270,52 @@ $userName = htmlspecialchars($_SESSION['nombre']);
                 <div class="content-card p-3">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h3><i class="bi bi-list-check"></i> Tareas</h3>
-                        <button id="btn-create-task" class="btn-primary">
+                        <button id="btn-create-task" class="btn-primary" data-bs-toggle="modal"
+                            data-bs-target="#crearTareaModal">
                             <i class="bi bi-plus-circle"></i> Crear Tarea
                         </button>
                     </div>
                     <ul id="task-list" class="list-group mt-3">
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Comprar víveres - 10 pts
-                            <div class="task-actions">
-                                <button class="btn btn-sm btn-outline-primary admin-only me-1" title="Modificar">
-                                    <i class="bi bi-pencil-square"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger admin-only" title="Eliminar">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-success complete-task-btn" title="Completada">
-                                    <i class="bi bi-check-circle"></i>
-                                </button>
-                            </div>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Diseñar interfaz - 20 pts
-                            <div class="task-actions">
-                                <button class="btn btn-sm btn-outline-primary admin-only me-1" title="Modificar">
-                                    <i class="bi bi-pencil-square"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger admin-only" title="Eliminar">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-success complete-task-btn" title="Completada">
-                                    <i class="bi bi-check-circle"></i>
-                                </button>
-                            </div>
-                        </li>
+                        <?php if (empty($tareas)): ?>
+                            <li class="list-group-item">No hay tareas pendientes en este grupo.</li>
+                        <?php else: ?>
+                            <?php foreach ($tareas as $tarea): ?>
+                                <li
+                                    class="list-group-item d-flex justify-content-between align-items-start flex-column flex-md-row">
+                                    <div>
+                                        <strong><?= htmlspecialchars($tarea['titulo']) ?></strong> -
+                                        <?= htmlspecialchars($tarea['puntos']) ?> pts<br>
+                                        <small><?= htmlspecialchars($tarea['descripcion']) ?></small><br>
+                                        <small class="text-muted">Fecha límite:
+                                            <?= date('d/m/Y', strtotime($tarea['fecha_limite'])) ?>
+                                        </small><br>
+                                        <small class="text-muted">
+                                            Asignado a: <?= htmlspecialchars($tarea['asignado'] ?? 'Sin asignar') ?>
+                                        </small>
+                                    </div>
+                                    <div class="task-actions mt-2 mt-md-0">
+                                        <button class="btn btn-sm btn-outline-primary admin-only me-1" data-bs-toggle="modal"
+                                            data-bs-target="#editarTareaModal" data-id="<?= $tarea['id_tarea'] ?>"
+                                            data-titulo="<?= htmlspecialchars($tarea['titulo']) ?>"
+                                            data-descripcion="<?= htmlspecialchars($tarea['descripcion']) ?>"
+                                            data-puntos="<?= $tarea['puntos'] ?>" data-fecha="<?= $tarea['fecha_limite'] ?>"
+                                            data-asignado="<?= $tarea['asignado'] ?? '' ?>" title="Modificar">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger admin-only" data-bs-toggle="modal"
+                                            data-bs-target="#eliminarTareaModal" data-id="<?= $tarea['id_tarea'] ?>"
+                                            data-titulo="<?= htmlspecialchars($tarea['titulo']) ?>" title="Eliminar">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-success complete-task-btn"
+                                            data-id="<?= $tarea['id_tarea'] ?>" title="Completada">
+                                            <i class="bi bi-check-circle"></i>
+                                        </button>
+
+                                    </div>
+                                </li>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </ul>
                 </div>
             </div>
@@ -285,32 +360,92 @@ $userName = htmlspecialchars($_SESSION['nombre']);
 
             <!-- Historial -->
             <div id="historial-section" class="content-section">
-                <div class="content-card p-3">
-                    <h3><i class="bi bi-clock-history"></i> Historial</h3>
-                    <ul id="history-list" class="list-group">
-                        <li class="list-group-item">Mía completó "Diseñar interfaz"</li>
-                        <li class="list-group-item">Carlos canjeó "Café gratis"</li>
+                <h3>Historial del grupo</h3>
+                <?php if (count($historial) > 0): ?>
+                    <ul class="list-group">
+                        <?php foreach ($historial as $h): ?>
+                            <li class="list-group-item">
+                                <strong><?= htmlspecialchars($h['usuario']) ?></strong>
+                                <?php if ($h['estadoTarea'] == 1): ?>
+                                    marcó como realizada la tarea
+                                <?php elseif ($h['estadoTarea'] == 2): ?>
+                                    completó/aprobó la tarea
+                                <?php elseif ($h['estadoTarea'] == 0): ?>
+                                    fue rechazada su tarea
+                                <?php endif; ?>
+                                <em><?= htmlspecialchars($h['tarea']) ?></em>
+                                el <?= date('d/m/Y', strtotime($h['fecha'])) ?>.
+                                <?php if ($h['puntosOtorgados'] > 0): ?>
+                                    <span class="badge bg-success"><?= $h['puntosOtorgados'] ?> pts</span>
+                                <?php endif; ?>
+                            </li>
+                        <?php endforeach; ?>
                     </ul>
-                </div>
+                <?php else: ?>
+                    <p>No hay historial todavía.</p>
+                <?php endif; ?>
             </div>
 
             <!-- Aprobar Tareas (solo admin) -->
             <div id="aprobar-tareas-section" class="content-section">
                 <div class="content-card p-3">
-                    <h3><i class="bi bi-check2-square"></i> Aprobar Tareas</h3>
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h3><i class="bi bi-check2-square"></i> Aprobar Tareas</h3>
+                        <span class="text-muted">
+                            <?php if (!empty($tareas_realizadas)): ?>
+                                <?= count($tareas_realizadas) ?> pendientes de aprobación
+                            <?php else: ?>
+                                Sin tareas para aprobar
+                            <?php endif; ?>
+                        </span>
+                    </div>
+
                     <ul id="approve-task-list" class="list-group mt-3">
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Diseñar interfaz - 20 pts
-                            <button class="btn btn-sm btn-outline-success" title="Aprobar">
-                                <i class="bi bi-check-circle"></i>
-                            </button>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Comprar víveres - 10 pts
-                            <button class="btn btn-sm btn-outline-success" title="Aprobar">
-                                <i class="bi bi-check-circle"></i>
-                            </button>
-                        </li>
+                        <?php if (empty($tareas_realizadas)): ?>
+                            <li class="list-group-item text-muted">No hay tareas marcadas como realizadas.</li>
+                        <?php else: ?>
+                            <?php foreach ($tareas_realizadas as $t): ?>
+                                <li
+                                    class="list-group-item d-flex justify-content-between align-items-start flex-column flex-md-row">
+                                    <div>
+                                        <strong><?= htmlspecialchars($t['titulo']) ?></strong> -
+                                        <?= htmlspecialchars($t['puntos']) ?> pts<br>
+                                        <small><?= htmlspecialchars($t['descripcion']) ?></small><br>
+                                        <small class="text-muted">
+                                            Asignado a: <?= htmlspecialchars($t['asignado'] ?? 'Desconocido') ?>
+                                        </small><br>
+                                        <?php if (!empty($t['fecha_entrega'])): ?>
+                                            <small class="text-muted">Entregada:
+                                                <?= date('d/m/Y', strtotime($t['fecha_entrega'])) ?></small>
+                                        <?php else: ?>
+                                            <small class="text-muted">Fecha límite:
+                                                <?= date('d/m/Y', strtotime($t['fecha_limite'])) ?></small>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="task-actions mt-2 mt-md-0">
+                                        <div class="task-actions mt-2 mt-md-0">
+                                            <!-- Botón Aprobar -->
+                                            <form action="../tareas/aprobar_tarea.php" method="POST" class="d-inline">
+                                                <input type="hidden" name="id_tarea" value="<?= $t['id_tarea'] ?>">
+                                                <input type="hidden" name="id_grupo" value="<?= $id_grupo ?>">
+                                                <button type="submit" class="btn btn-sm btn-outline-success" title="Aprobar">
+                                                    <i class="bi bi-check-circle"></i>
+                                                </button>
+                                            </form>
+
+                                            <!-- Botón Rechazar -->
+                                            <form action="../tareas/rechazar_tarea.php" method="POST" class="d-inline ms-2">
+                                                <input type="hidden" name="id_tarea" value="<?= $t['id_tarea'] ?>">
+                                                <input type="hidden" name="id_grupo" value="<?= $id_grupo ?>">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Rechazar">
+                                                    <i class="bi bi-x-circle"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </li>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </ul>
                 </div>
             </div>
@@ -428,6 +563,137 @@ $userName = htmlspecialchars($_SESSION['nombre']);
                     <a href="../../auth/logout.php" class="btn btn-danger">Cerrar sesión</a>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal Crear Tarea -->
+    <div class="modal fade" id="crearTareaModal" tabindex="-1" aria-labelledby="crearTareaLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <form action="../tareas/crear_tarea.php" method="POST" class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="crearTareaLabel">Crear nueva tarea</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="id_grupo" value="<?= $id_grupo ?>">
+
+                    <div class="mb-3">
+                        <label for="tituloTarea" class="form-label">Título</label>
+                        <input type="text" class="form-control" id="tituloTarea" name="titulo" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="descripcionTarea" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="descripcionTarea" name="descripcion" rows="3"
+                            required></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="puntosTarea" class="form-label">Puntos</label>
+                        <input type="number" class="form-control" id="puntosTarea" name="puntos" min="1" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="fechaLimite" class="form-label">Fecha límite</label>
+                        <input type="date" class="form-control" id="fechaLimite" name="fecha_limite" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="asignadoA" class="form-label">Asignar a</label>
+                        <select class="form-select" id="asignadoA" name="asignadoA" required>
+                            <option value="">Seleccionar miembro</option>
+                            <?php foreach ($miembros as $miembro): ?>
+                                <?php if ($miembro['rol'] !== 'administrador'): ?>
+                                    <option value="<?= $miembro['id_usuario'] ?>">
+                                        <?= htmlspecialchars($miembro['nombre']) ?>
+                                    </option>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Crear</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Eliminar Tarea -->
+    <div class="modal fade" id="eliminarTareaModal" tabindex="-1" aria-labelledby="eliminarTareaLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <form action="../tareas/eliminar_tarea.php" method="POST" class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="eliminarTareaLabel">Eliminar tarea</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Seguro que deseas eliminar la tarea <strong id="tareaTitulo"></strong>?</p>
+                    <input type="hidden" name="id_tarea" id="idTareaEliminar">
+                    <input type="hidden" name="id_grupo" value="<?= $id_grupo ?>">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Editar Tarea -->
+    <div class="modal fade" id="editarTareaModal" tabindex="-1" aria-labelledby="editarTareaLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <form action="../tareas/editar_tarea.php" method="POST" class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="editarTareaLabel">Editar tarea</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="id_tarea" id="editIdTarea">
+                    <input type="hidden" name="id_grupo" value="<?= $id_grupo ?>">
+
+                    <div class="mb-3">
+                        <label for="editTitulo" class="form-label">Título</label>
+                        <input type="text" class="form-control" id="editTitulo" name="titulo" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editDescripcion" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="editDescripcion" name="descripcion" rows="3"
+                            required></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editPuntos" class="form-label">Puntos</label>
+                        <input type="number" class="form-control" id="editPuntos" name="puntos" min="1" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editFecha" class="form-label">Fecha límite</label>
+                        <input type="date" class="form-control" id="editFecha" name="fecha_limite" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editAsignado" class="form-label">Asignado a</label>
+                        <select class="form-select" id="editAsignado" name="asignadoA" required>
+                            <option value="">Seleccionar miembro</option>
+                            <?php foreach ($miembros as $miembro): ?>
+                                <?php if ($miembro['rol'] !== 'administrador'): ?>
+                                    <option value="<?= $miembro['id_usuario'] ?>">
+                                        <?= htmlspecialchars($miembro['nombre']) ?>
+                                    </option>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                </div>
+            </form>
         </div>
     </div>
 
