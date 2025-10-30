@@ -1,8 +1,15 @@
 document.addEventListener("DOMContentLoaded", () => {
+    initGroupPage();
+});
+
+function initGroupPage() {
     handleSidebarNavigation();
     manejarSidebarResponsivo();
     configurarModalExpulsion();
-});
+    configurarModalEliminarTarea();
+    configurarModalEditarTarea();
+    configurarBotonCompletarTarea();
+}
 
 // --- Navegación lateral ---
 function handleSidebarNavigation() {
@@ -15,9 +22,12 @@ function handleSidebarNavigation() {
             if (isExternal) return;
 
             e.preventDefault();
+
+            // Quitar 'active' de todos
             menuItems.forEach(i => i.classList.remove("active"));
             sections.forEach(s => s.classList.remove("active"));
 
+            // Activar el clicado
             item.classList.add("active");
             const target = item.dataset.section;
             if (target) {
@@ -80,6 +90,7 @@ function manejarSidebarResponsivo() {
     window.addEventListener("resize", ajustarSidebar);
 }
 
+// --- Modal expulsar miembro ---
 function configurarModalExpulsion() {
     const expulsarModal = document.getElementById("expulsarModal");
     if (!expulsarModal) return;
@@ -91,5 +102,72 @@ function configurarModalExpulsion() {
 
         document.getElementById("nombreMiembro").textContent = nombre;
         document.getElementById("idUsuarioExpulsar").value = idUsuario;
+    });
+}
+
+// --- Modal eliminar tarea ---
+function configurarModalEliminarTarea() {
+    const eliminarTareaModal = document.getElementById("eliminarTareaModal");
+    if (!eliminarTareaModal) return;
+
+    eliminarTareaModal.addEventListener("show.bs.modal", function (event) {
+        const button = event.relatedTarget;
+        const idTarea = button.getAttribute("data-id");
+        const titulo = button.getAttribute("data-titulo");
+
+        document.getElementById("idTareaEliminar").value = idTarea;
+        document.getElementById("tareaTitulo").textContent = titulo;
+    });
+}
+
+// --- Modal editar tarea ---
+function configurarModalEditarTarea() {
+    const editarTareaModal = document.getElementById("editarTareaModal");
+    if (!editarTareaModal) return;
+
+    editarTareaModal.addEventListener("show.bs.modal", function (event) {
+        const button = event.relatedTarget;
+
+        document.getElementById("editIdTarea").value = button.getAttribute("data-id");
+        document.getElementById("editTitulo").value = button.getAttribute("data-titulo");
+        document.getElementById("editDescripcion").value = button.getAttribute("data-descripcion");
+        document.getElementById("editPuntos").value = button.getAttribute("data-puntos");
+        document.getElementById("editFecha").value = button.getAttribute("data-fecha");
+
+        // Seleccionar el asignado
+        const asignado = button.getAttribute("data-asignado");
+        const select = document.getElementById("editAsignado");
+        if (select) {
+            [...select.options].forEach(opt => {
+                opt.selected = (opt.value === asignado);
+            });
+        }
+    });
+}
+
+//completar tarea
+function configurarBotonCompletarTarea() {
+    document.querySelectorAll(".complete-task-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const idTarea = btn.getAttribute("data-id");
+            const idGrupo = new URLSearchParams(window.location.search).get("id");
+
+            if (!idTarea || !idGrupo) {
+                console.error("Faltan datos para completar tarea");
+                return;
+            }
+
+            fetch("../tareas/completar_tarea.php", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: `id_tarea=${encodeURIComponent(idTarea)}&id_grupo=${encodeURIComponent(idGrupo)}`
+            })
+            .then(res => res.text())
+            .then(data => {
+                console.log("Respuesta completar_tarea:", data);
+                window.location.href = `ver_grupo.php?id=${idGrupo}&section=tareas`;
+            })
+            .catch(err => console.error("Error al completar tarea:", err));
+        });
     });
 }
