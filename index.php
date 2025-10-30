@@ -32,6 +32,21 @@ if ($userEmail) {
     $stmt->execute([':email' => $userEmail]);
     $grupos_propios = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
+
+$grupos_participa = [];
+
+if ($userEmail) {
+    $stmt = $conn->prepare("
+        SELECT g.id_grupo, g.nombre, g.tipo,
+               (SELECT COUNT(*) FROM grupousuario WHERE grupo_id = g.id_grupo AND estado = 1) AS miembros
+        FROM grupo g
+        JOIN grupousuario gu ON gu.grupo_id = g.id_grupo
+        JOIN usuario u ON gu.usuario_id = u.id_usuario
+        WHERE u.email = :email AND gu.estado = 1 AND gu.rol != 'administrador'
+    ");
+    $stmt->execute([':email' => $userEmail]);
+    $grupos_participa = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 ?>
 
 <!DOCTYPE html>
@@ -111,10 +126,9 @@ if ($userEmail) {
             </div>
             <!-- Header buttons -->
             <div class="header-right">
-                <button class="btn-secondary">
-                    <i class="bi bi-person-plus"></i>
-                    Unirse a Grupo
-                </button>
+                <a href="colaborador/grupo/unirse_grupo.php" class="btn btn-secondary">
+                    <i class="bi bi-person-plus"></i> Unirse a Grupo
+                </a>
                 <a href="administrador/grupo/crear_grupo.php" class="btn btn-primary">
                     <i class="bi bi-plus-lg"></i>
                     Crear Grupo
@@ -164,94 +178,74 @@ if ($userEmail) {
                     </div>
 
                     <!-- Groups I Belong To -->
-                    <div class="content-card">
+                    <div class="content-card mt-4">
                         <div class="card-header">
                             <h3 class="card-title">Grupos donde Participo</h3>
-                            <a href="#" class="card-action">Ver todos</a>
                         </div>
                         <div class="groups-grid">
-                            <div class="group-card laboral" data-group-id="4">
-                                <div class="group-icon">
-                                    <i class="bi bi-briefcase-fill"></i>
+                            <?php foreach ($grupos_participa as $grupo): ?>
+                                <div class="group-card <?= strtolower($grupo['tipo']) ?>"
+                                    data-group-id="<?= $grupo['id_grupo'] ?>">
+                                    <div class="group-icon">
+                                        <i class="bi bi-people-fill"></i>
+                                    </div>
+                                    <div class="group-info">
+                                        <div class="group-name"><?= htmlspecialchars($grupo['nombre']) ?></div>
+                                        <div class="group-category"><?= ucfirst($grupo['tipo']) ?></div>
+                                        <div class="group-members"><?= $grupo['miembros'] ?> miembros</div>
+                                    </div>
                                 </div>
-                                <div class="group-info">
-                                    <div class="group-name">Desarrollo Web</div>
-                                    <div class="group-category">Laboral</div>
-                                    <div class="group-members">6 miembros</div>
-                                </div>
-                            </div>
-
-                            <div class="group-card familia" data-group-id="5">
-                                <div class="group-icon">
-                                    <i class="bi bi-house-heart-fill"></i>
-                                </div>
-                                <div class="group-info">
-                                    <div class="group-name">Casa de los Abuelos</div>
-                                    <div class="group-category">Familia</div>
-                                    <div class="group-members">7 miembros</div>
-                                </div>
-                            </div>
-
-                            <div class="group-card laboral" data-group-id="6">
-                                <div class="group-icon">
-                                    <i class="bi bi-briefcase-fill"></i>
-                                </div>
-                                <div class="group-info">
-                                    <div class="group-name">Proyecto Alpha</div>
-                                    <div class="group-category">Laboral</div>
-                                    <div class="group-members">12 miembros</div>
-                                </div>
-                            </div>
+                            <?php endforeach; ?>
                         </div>
                     </div>
-                </div>
 
-                <!-- Notifications Section -->
-                <div id="notificaciones-section" class="content-section">
-                    <div class="content-card">
-                        <div class="card-header">
-                            <h3 class="card-title">Notificaciones Recientes</h3>
-                            <a href="#" class="card-action">Ver todas</a>
-                        </div>
-                        <div class="notifications-list">
-                            <div class="notification-item unread">
-                                <div class="notification-icon">
-                                    <i class="bi bi-person-plus-fill"></i>
-                                </div>
-                                <div class="notification-content">
-                                    <div class="notification-text">María se unió al grupo "Equipo Marketing"</div>
-                                    <div class="notification-time">Hace 5 minutos</div>
-                                </div>
+                    <!-- Notifications Section -->
+                    <div id="notificaciones-section" class="content-section">
+                        <div class="content-card">
+                            <div class="card-header">
+                                <h3 class="card-title">Notificaciones Recientes</h3>
+                                <a href="#" class="card-action">Ver todas</a>
                             </div>
-
-                            <div class="notification-item unread">
-                                <div class="notification-icon">
-                                    <i class="bi bi-check-circle-fill"></i>
-                                </div>
-                                <div class="notification-content">
-                                    <div class="notification-text">Carlos completó "Diseño de interfaz" en Proyecto
-                                        Alpha
+                            <div class="notifications-list">
+                                <div class="notification-item unread">
+                                    <div class="notification-icon">
+                                        <i class="bi bi-person-plus-fill"></i>
                                     </div>
-                                    <div class="notification-time">Hace 1 hora</div>
-                                </div>
-                            </div>
-
-                            <div class="notification-item">
-                                <div class="notification-icon">
-                                    <i class="bi bi-plus-circle-fill"></i>
-                                </div>
-                                <div class="notification-content">
-                                    <div class="notification-text">Nueva tarea asignada en "Mi Familia": Comprar víveres
+                                    <div class="notification-content">
+                                        <div class="notification-text">María se unió al grupo "Equipo Marketing"</div>
+                                        <div class="notification-time">Hace 5 minutos</div>
                                     </div>
-                                    <div class="notification-time">Hace 2 horas</div>
                                 </div>
+
+                                <div class="notification-item unread">
+                                    <div class="notification-icon">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                    </div>
+                                    <div class="notification-content">
+                                        <div class="notification-text">Carlos completó "Diseño de interfaz" en Proyecto
+                                            Alpha
+                                        </div>
+                                        <div class="notification-time">Hace 1 hora</div>
+                                    </div>
+                                </div>
+
+                                <div class="notification-item">
+                                    <div class="notification-icon">
+                                        <i class="bi bi-plus-circle-fill"></i>
+                                    </div>
+                                    <div class="notification-content">
+                                        <div class="notification-text">Nueva tarea asignada en "Mi Familia": Comprar
+                                            víveres
+                                        </div>
+                                        <div class="notification-time">Hace 2 horas</div>
+                                    </div>
+                                </div>
+                                <!-- Removed the last 2 notifications about points and family meeting -->
                             </div>
-                            <!-- Removed the last 2 notifications about points and family meeting -->
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
     </main>
 
     <!-- Modal Cerrar Sesión -->
