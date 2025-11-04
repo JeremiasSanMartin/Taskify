@@ -4,7 +4,7 @@
 // Estos valores se tendran que modificar si la pagina se sube a algun luhar como hostinger
 $host = "localhost";      
 $user = "root";           
-$password = "root";          
+$password = "";          
 $database = "taskify";    // Nombre de la base de datos
 
 try {
