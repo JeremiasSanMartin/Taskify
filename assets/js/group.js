@@ -11,6 +11,7 @@ function initGroupPage() {
     configurarBotonCompletarTarea();
     mostrarToastExpulsion();
     configurarBotonCopiarCodigo();
+    actualizarMiembrosPeriodicamente();
 }
 
 // --- Navegación lateral ---
@@ -164,12 +165,12 @@ function configurarBotonCompletarTarea() {
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: `id_tarea=${encodeURIComponent(idTarea)}&id_grupo=${encodeURIComponent(idGrupo)}`
             })
-            .then(res => res.text())
-            .then(data => {
-                console.log("Respuesta completar_tarea:", data);
-                window.location.href = `ver_grupo.php?id=${idGrupo}&section=tareas`;
-            })
-            .catch(err => console.error("Error al completar tarea:", err));
+                .then(res => res.text())
+                .then(data => {
+                    console.log("Respuesta completar_tarea:", data);
+                    window.location.href = `ver_grupo.php?id=${idGrupo}&section=tareas`;
+                })
+                .catch(err => console.error("Error al completar tarea:", err));
         });
     });
 }
@@ -206,6 +207,43 @@ function configurarBotonCopiarCodigo() {
         }).catch(err => {
             console.error("Error al copiar:", err);
         });
+    });
+}
+
+function actualizarMiembrosPeriodicamente() {
+    console.log("Actualizando miembros...");
+    const grupoId = obtenerGrupoIdDesdeURL(); // extraé el ID del grupo desde la URL
+    if (!grupoId) return;
+
+    setInterval(() => {
+        fetch(`/Taskify/administrador/grupo/miembros_ajax.php?id=${grupoId}`)
+        .then(res => res.json())
+            .then(data => renderizarMiembros(data))
+            .catch(err => console.error("Error al actualizar miembros:", err));
+    }, 5000); // cada 5 segundos
+}
+
+function obtenerGrupoIdDesdeURL() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("id");
+}
+
+function renderizarMiembros(miembros) {
+    console.log("Miembros recibidos:", miembros);
+    const lista = document.getElementById("member-list");
+    if (!lista) return;
+
+    lista.innerHTML = "";
+    if (miembros.length === 0) {
+        lista.innerHTML = "<li class='list-group-item text-muted'>Este grupo aún no tiene miembros.</li>";
+        return;
+    }
+
+    miembros.forEach(m => {
+        const li = document.createElement("li");
+        li.className = "list-group-item d-flex justify-content-between align-items-center";
+        li.textContent = m.nombre + (m.rol === "administrador" ? " (Admin)" : "");
+        lista.appendChild(li);
     });
 }
 
