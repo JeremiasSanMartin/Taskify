@@ -36,7 +36,7 @@ $stmt->execute([':gid' => $id_grupo, ':uid' => $usuario_id]);
 $rol = $stmt->fetchColumn();
 
 // Obtener datos del grupo
-$stmt = $conn->prepare("SELECT nombre, tipo FROM grupo WHERE id_grupo = :id");
+$stmt = $conn->prepare("SELECT nombre, tipo, codigo_invitacion, descripcion FROM grupo WHERE id_grupo = :id");
 $stmt->execute([':id' => $id_grupo]);
 $grupo = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -46,7 +46,7 @@ if (!$grupo) {
 }
 
 // Obtener cantidad de miembros
-$stmt = $conn->prepare("SELECT COUNT(*) FROM grupousuario WHERE grupo_id = :id");
+$stmt = $conn->prepare("SELECT COUNT(*) FROM grupousuario WHERE grupo_id = :id AND estado = 1");
 $stmt->execute([':id' => $id_grupo]);
 $total_miembros = $stmt->fetchColumn();
 
@@ -151,7 +151,7 @@ $historial = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <link rel="stylesheet" href="../../assets/css/group.css">
 </head>
 
-<body class="dashboard-body" >
+<body class="dashboard-body">
 
 
     <!-- Sidebar -->
@@ -159,7 +159,7 @@ $historial = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <div class="sidebar-header d-flex align-items-center justify-content-between">
             <div class="logo d-flex align-items-center gap-2">
                 <i class="bi bi-people-fill"></i>
-                <span id="group-sidebar-title">Grupo Demo</span>
+                <span id="group-sidebar-title"><?= htmlspecialchars($grupo['nombre']) ?></span>
             </div>
         </div>
 
@@ -212,21 +212,36 @@ $historial = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     <!-- Main Content -->
     <main class="main-content">
-        <header class="dashboard-header d-flex align-items-center justify-content-between flex-wrap w-100">
+        <header class="dashboard-header d-flex justify-content-between align-items-center flex-wrap w-100">
+            <!-- Columna izquierda: info del grupo -->
             <div class="d-flex flex-column">
                 <h1 class="page-title mb-0 d-flex align-items-center gap-2">
                     <i class="bi bi-people-fill"></i>
-                    <?php echo htmlspecialchars($grupo['nombre']); ?>
+                    <?= htmlspecialchars($grupo['nombre']) ?>
                 </h1>
-                <p class="page-subtitle mt-1">
-                    Categoría: <span id="group-category"><?php echo strtoupper($grupo['tipo']); ?></span> •
-                    <span id="group-members-count"><?php echo $total_miembros; ?>
-                        <?php echo $total_miembros == 1 ? 'miembro' : 'miembros'; ?>
-                    </span>
+                <p class="page-subtitle mt-1 mb-0">
+                    Categoría: <span id="group-category"><?= strtoupper($grupo['tipo']) ?></span> •
+                    <span id="group-members-count"><?= $total_miembros ?>
+                        <?= $total_miembros == 1 ? 'miembro' : 'miembros' ?></span>
                 </p>
+                <?php if (!empty($grupo['descripcion'])): ?>
+                    <p class="group-description mt-2 text-muted">
+                        <?= nl2br(htmlspecialchars($grupo['descripcion'])) ?>
+                    </p>
+                <?php endif; ?>
             </div>
 
-            <div class="d-flex align-items-center gap-2 ms-auto">
+            <!-- Columna centro: código de invitación -->
+            <div class="d-flex justify-content-center flex-grow-1">
+                <button id="btnCopiarCodigo" class="badge bg-light text-dark border border-secondary px-4 py-2 fs-6"
+                    style="cursor: pointer;" data-codigo="<?= htmlspecialchars($grupo['codigo_invitacion']) ?>">
+                    <i class="bi bi-link-45deg me-1"></i>
+                    Código de invitación: <strong><?= htmlspecialchars($grupo['codigo_invitacion']) ?></strong>
+                </button>
+            </div>
+
+            <!-- Columna derecha: botones -->
+            <div class="d-flex align-items-center gap-2">
                 <button class="btn btn-primary btn-lg px-4" data-bs-toggle="modal" data-bs-target="#editarGrupoModal">
                     <i class="bi bi-pencil-square me-1"></i> Editar
                 </button>
@@ -461,6 +476,37 @@ $historial = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </main>
 
+    <!-- Toast de expulsión -->
+    <?php if (isset($_GET['expulsion']) && $_GET['expulsion'] === 'ok'): ?>
+        <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1055">
+            <div id="expulsionToast" class="toast align-items-center text-bg-success border-0 show" role="alert"
+                aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        El miembro fue expulsado correctamente del grupo.
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+                        aria-label="Cerrar"></button>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <!--Toast de copiar el codigo de invitacion en portapapeles-->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1055">
+        <div id="copiadoToast" class="toast align-items-center text-bg-success border-0" role="alert"
+            aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    Código copiado al portapapeles.
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+                    aria-label="Cerrar"></button>
+            </div>
+        </div>
+    </div>
+
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../../assets/js/group.js"></script>
 
@@ -530,14 +576,15 @@ $historial = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="modal fade" id="expulsarModal" tabindex="-1" aria-labelledby="expulsarLabel" aria-hidden="true">
         <div class="modal-dialog">
             <form action="expulsar_miembro.php" method="POST" class="modal-content">
+                <input type="hidden" name="grupo_id" value="<?= $id_grupo ?>">
+                <input type="hidden" name="usuario_id" id="idUsuarioExpulsar">
+
                 <div class="modal-header bg-danger text-white">
                     <h5 class="modal-title" id="expulsarLabel">Confirmar expulsión</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
                 <div class="modal-body">
                     ¿Estás seguro que querés expulsar a <strong id="nombreMiembro"></strong> del grupo?
-                    <input type="hidden" name="id_usuario" id="idUsuarioExpulsar">
-                    <input type="hidden" name="id_grupo" value="<?php echo $id_grupo; ?>">
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>

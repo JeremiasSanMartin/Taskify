@@ -9,6 +9,8 @@ function initGroupPage() {
     configurarModalEliminarTarea();
     configurarModalEditarTarea();
     configurarBotonCompletarTarea();
+    mostrarToastExpulsion();
+    configurarBotonCopiarCodigo();
 }
 
 // --- Navegación lateral ---
@@ -171,3 +173,39 @@ function configurarBotonCompletarTarea() {
         });
     });
 }
+
+function mostrarToastExpulsion() {
+    const toastEl = document.getElementById("expulsionToast");
+    if (toastEl) {
+        const toast = new bootstrap.Toast(toastEl);
+        toast.show();
+        limpiarParametrosToast();
+    }
+}
+
+function limpiarParametrosToast() {
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("expulsion")) {
+        url.searchParams.delete("expulsion");
+        window.history.replaceState({}, document.title, url.pathname + url.search);
+    }
+}
+
+function configurarBotonCopiarCodigo() {
+    const btn = document.getElementById("btnCopiarCodigo");
+    if (!btn) return;
+
+    btn.addEventListener("click", () => {
+        const codigo = btn.getAttribute("data-codigo");
+        navigator.clipboard.writeText(codigo).then(() => {
+            const toastEl = document.getElementById("copiadoToast");
+            if (toastEl) {
+                const toast = new bootstrap.Toast(toastEl);
+                toast.show();
+            }
+        }).catch(err => {
+            console.error("Error al copiar:", err);
+        });
+    });
+}
+

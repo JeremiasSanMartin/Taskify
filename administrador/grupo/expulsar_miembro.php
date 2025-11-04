@@ -2,14 +2,14 @@
 session_start();
 require_once '../../includes/connection.php';
 
-if (!isset($_SESSION['email']) || !isset($_POST['id_grupo']) || !isset($_POST['id_usuario'])) {
+if (!isset($_SESSION['email']) || !isset($_POST['grupo_id']) || !isset($_POST['usuario_id'])) {
     echo "Datos incompletos.";
     exit();
 }
 
 $email = $_SESSION['email'];
-$id_grupo = $_POST['id_grupo'];
-$id_usuario_expulsado = $_POST['id_usuario'];
+$id_grupo = $_POST['grupo_id'];
+$id_usuario_expulsado = $_POST['usuario_id'];
 
 // Verificar que el usuario actual sea admin del grupo
 $stmt = $conn->prepare("
@@ -34,6 +34,6 @@ $stmt = $conn->prepare("
 ");
 $stmt->execute([':grupo' => $id_grupo, ':usuario' => $id_usuario_expulsado]);
 
-header("Location: ver_grupo.php?id=" . $id_grupo);
+header("Location: ver_grupo.php?id=" . urlencode($id_grupo) . "&expulsion=ok");
 exit();
 ?>
