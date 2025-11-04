@@ -46,6 +46,30 @@ $miembros = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $total_miembros = count($miembros ?? []);
 $userName = htmlspecialchars($_SESSION['nombre']);
 $userEmail = htmlspecialchars($_SESSION['email']);
+
+// Obtener tareas asignadas al colaborador
+$stmt = $conn->prepare("
+    SELECT t.id_tarea, t.titulo, t.descripcion, t.puntos, t.fecha_limite
+    FROM tarea t
+    WHERE t.grupo_id = :grupo_id AND t.estado = 'pendiente' AND t.asignadoA = :usuario_id
+    ORDER BY t.fecha_limite ASC
+");
+$stmt->execute([':grupo_id' => $id_grupo, ':usuario_id' => $usuario_id]);
+$tareas_asignadas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Obtener historial del colaborador
+$stmt = $conn->prepare("
+    SELECT h.fecha, h.puntosOtorgados, h.estadoTarea,
+           u.nombre AS usuario, t.titulo AS tarea
+    FROM historialgrupousuario h
+    LEFT JOIN grupousuario gu ON h.grupo_usuario_id = gu.id_grupo_usuario
+    LEFT JOIN usuario u ON gu.usuario_id = u.id_usuario
+    LEFT JOIN tarea t ON h.tarea_id_tarea = t.id_tarea
+    WHERE gu.grupo_id = :grupo_id
+    ORDER BY h.fecha DESC, h.id_historialGrupoUsuario DESC
+");
+$stmt->execute([':grupo_id' => $id_grupo]);
+$historial = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 ?>
 
 <!DOCTYPE html>
@@ -127,8 +151,7 @@ $userEmail = htmlspecialchars($_SESSION['email']);
                 </p>
             </div>
             <div class="d-flex align-items-center gap-2 ms-auto">
-                <button class="btn btn-danger btn-lg px-4" data-bs-toggle="modal"
-                    data-bs-target="#abandonarGrupoModal">
+                <button class="btn btn-danger btn-lg px-4" data-bs-toggle="modal" data-bs-target="#abandonarGrupoModal">
                     <i class="bi bi-box-arrow-left me-1"></i> Abandonar
                 </button>
             </div>
@@ -153,10 +176,36 @@ $userEmail = htmlspecialchars($_SESSION['email']);
             <!-- Tareas -->
             <div id="tareas-section" class="content-section">
                 <div class="content-card p-3">
-                    <h3><i class="bi bi-list-check"></i> Tareas</h3>
-                    <p>Aquí se mostrarán las tareas asignadas al grupo.</p>
+                    <h3><i class="bi bi-list-check"></i> Mis Tareas</h3>
+                    <ul class="list-group mt-3">
+                        <?php if (empty($tareas_asignadas)): ?>
+                            <li class="list-group-item text-muted">No tenés tareas pendientes asignadas.</li>
+                        <?php else: ?>
+                            <?php foreach ($tareas_asignadas as $t): ?>
+                                <li
+                                    class="list-group-item d-flex justify-content-between align-items-start flex-column flex-md-row">
+                                    <div>
+                                        <strong><?= htmlspecialchars($t['titulo']) ?></strong> - <?= $t['puntos'] ?> pts<br>
+                                        <small><?= htmlspecialchars($t['descripcion']) ?></small><br>
+                                        <small class="text-muted">Fecha límite:
+                                            <?= date('d/m/Y', strtotime($t['fecha_limite'])) ?></small>
+                                    </div>
+                                    <form action="../../administrador/tareas/completar_tarea.php" method="POST"
+                                        class="mt-2 mt-md-0">
+                                        <input type="hidden" name="id_tarea" value="<?= $t['id_tarea'] ?>">
+                                        <input type="hidden" name="id_grupo" value="<?= $id_grupo ?>">
+                                        <button type="submit" class="btn btn-sm btn-outline-success"
+                                            title="Marcar como realizada">
+                                            <i class="bi bi-check-circle"></i>
+                                        </button>
+                                    </form>
+                                </li>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </ul>
                 </div>
             </div>
+
 
             <!-- Recompensas -->
             <div id="recompensas-section" class="content-section">
@@ -169,16 +218,89 @@ $userEmail = htmlspecialchars($_SESSION['email']);
             <!-- Historial -->
             <div id="historial-section" class="content-section">
                 <div class="content-card p-3">
-                    <h3><i class="bi bi-clock-history"></i> Historial</h3>
-                    <p>Aquí se mostrará el historial de actividad del grupo.</p>
+                    <h3><i class="bi bi-clock-history"></i> Historial del grupo</h3>
+                    <?php if (empty($historial)): ?>
+                        <p class="text-muted">Todavía no hay actividad registrada.</p>
+                    <?php else: ?>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Usuario</th>
+                                        <th>Acción</th>
+                                        <th>Tarea</th>
+                                        <th>Fecha</th>
+                                        <th>Puntos</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($historial as $h): ?>
+                                        <tr>
+                                            <td><?= htmlspecialchars($h['usuario']) ?></td>
+                                            <td>
+                                                <?php
+                                                switch ($h['estadoTarea']) {
+                                                    case 0:
+                                                        echo "Rechazó la tarea";
+                                                        break;
+                                                    case 1:
+                                                        echo "Marcó como realizada";
+                                                        break;
+                                                    case 2:
+                                                        echo "Aprobó la tarea";
+                                                        break;
+                                                    case 3:
+                                                        echo "Eliminó la tarea";
+                                                        break;
+                                                    case 4:
+                                                        echo "Editó la tarea";
+                                                        break;
+                                                    case 5:
+                                                        echo "Creó la tarea";
+                                                        break;
+                                                    default:
+                                                        echo "Acción desconocida";
+                                                }
+                                                ?>
+                                            </td>
+                                            <td><?= htmlspecialchars($h['tarea'] ?? 'Sin título') ?></td>
+                                            <td><?= date('d/m/Y', strtotime($h['fecha'])) ?></td>
+                                            <td class="text-center">
+                                                <?= ($h['puntosOtorgados'] > 0)
+                                                    ? "<span class='badge bg-success'>{$h['puntosOtorgados']} pts</span>"
+                                                    : "-" ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
+
+
         </div>
     </main>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../../assets/js/group.js"></script>
+    <!-- Modal Cerrar Sesión -->
+    <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="logoutLabel">¿Cerrar sesión?</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    ¿Estás seguro que querés cerrar sesión?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <a href="../../auth/logout.php" class="btn btn-danger">Cerrar sesión</a>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal: Confirmar abandono -->
     <div class="modal fade" id="abandonarGrupoModal" tabindex="-1" aria-labelledby="abandonarGrupoLabel"
@@ -203,6 +325,10 @@ $userEmail = htmlspecialchars($_SESSION['email']);
             </form>
         </div>
     </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../../assets/js/group.js"></script>
 
 </body>
 
