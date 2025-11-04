@@ -375,31 +375,68 @@ $historial = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             <!-- Historial -->
             <div id="historial-section" class="content-section">
-                <h3>Historial del grupo</h3>
-                <?php if (count($historial) > 0): ?>
-                    <ul class="list-group">
-                        <?php foreach ($historial as $h): ?>
-                            <li class="list-group-item">
-                                <strong><?= htmlspecialchars($h['usuario']) ?></strong>
-                                <?php if ($h['estadoTarea'] == 1): ?>
-                                    marcó como realizada la tarea
-                                <?php elseif ($h['estadoTarea'] == 2): ?>
-                                    completó/aprobó la tarea
-                                <?php elseif ($h['estadoTarea'] == 0): ?>
-                                    fue rechazada su tarea
-                                <?php endif; ?>
-                                <em><?= htmlspecialchars($h['tarea']) ?></em>
-                                el <?= date('d/m/Y', strtotime($h['fecha'])) ?>.
-                                <?php if ($h['puntosOtorgados'] > 0): ?>
-                                    <span class="badge bg-success"><?= $h['puntosOtorgados'] ?> pts</span>
-                                <?php endif; ?>
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
-                <?php else: ?>
-                    <p>No hay historial todavía.</p>
-                <?php endif; ?>
+                <div class="content-card p-3">
+                    <h3><i class="bi bi-clock-history"></i> Historial del grupo</h3>
+                    <?php if (empty($historial)): ?>
+                        <p class="text-muted">Todavía no hay actividad registrada.</p>
+                    <?php else: ?>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Usuario</th>
+                                        <th>Acción</th>
+                                        <th>Tarea</th>
+                                        <th>Fecha</th>
+                                        <th>Puntos</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($historial as $h): ?>
+                                        <tr>
+                                            <td><?= htmlspecialchars($h['usuario']) ?></td>
+                                            <td>
+                                                <?php
+                                                switch ($h['estadoTarea']) {
+                                                    case 0:
+                                                        echo "Rechazó la tarea";
+                                                        break;
+                                                    case 1:
+                                                        echo "Marcó como realizada";
+                                                        break;
+                                                    case 2:
+                                                        echo "Aprobó la tarea";
+                                                        break;
+                                                    case 3:
+                                                        echo "Eliminó la tarea";
+                                                        break;
+                                                    case 4:
+                                                        echo "Editó la tarea";
+                                                        break;
+                                                    case 5:
+                                                        echo "Creó la tarea";
+                                                        break;
+                                                    default:
+                                                        echo "Acción desconocida";
+                                                }
+                                                ?>
+                                            </td>
+                                            <td><?= htmlspecialchars($h['tarea'] ?? 'Sin título') ?></td>
+                                            <td><?= date('d/m/Y', strtotime($h['fecha'])) ?></td>
+                                            <td class="text-center">
+                                                <?= ($h['puntosOtorgados'] > 0)
+                                                    ? "<span class='badge bg-success'>{$h['puntosOtorgados']} pts</span>"
+                                                    : "-" ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                </div>
             </div>
+
 
             <!-- Aprobar Tareas (solo admin) -->
             <div id="aprobar-tareas-section" class="content-section">

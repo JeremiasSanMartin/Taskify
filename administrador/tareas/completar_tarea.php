@@ -71,7 +71,7 @@ try {
             ':tarea_id' => $id_tarea
         ]);
     } else {
-        // Colaborador: solo marca como realizada
+        // Colaborador: solo marca como realizada para que la apruebe un admin
         $stmt = $conn->prepare("
             UPDATE tarea
             SET estado = 'realizada', fecha_entrega = NOW()
@@ -91,7 +91,12 @@ try {
         ]);
     }
 
-    echo "ok";
+    if ($rol === 'administrador') {
+        header("Location: /Taskify/administrador/grupo/ver_grupo.php?id=$id_grupo");
+    } else {
+        header("Location: /Taskify/colaborador/grupo/ver_grupo.php?id=$id_grupo");
+    }
+    exit;
 } catch (PDOException $e) {
     http_response_code(500);
     echo "Error: " . $e->getMessage();
