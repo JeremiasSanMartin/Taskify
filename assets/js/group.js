@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
     initGroupPage();
+
 });
 
 function initGroupPage() {
@@ -12,6 +13,11 @@ function initGroupPage() {
     mostrarToastExpulsion();
     configurarBotonCopiarCodigo();
     actualizarMiembrosPeriodicamente();
+    editRecompensas();
+    initConfirmarEliminarRecompensa();
+    eliminarRecompensa();
+    crearRecompensaConModal();
+
 }
 
 // --- Navegación lateral ---
@@ -217,7 +223,7 @@ function actualizarMiembrosPeriodicamente() {
 
     setInterval(() => {
         fetch(`/Taskify/administrador/grupo/miembros_ajax.php?id=${grupoId}`)
-        .then(res => res.json())
+            .then(res => res.json())
             .then(data => renderizarMiembros(data))
             .catch(err => console.error("Error al actualizar miembros:", err));
     }, 5000); // cada 5 segundos
@@ -246,4 +252,165 @@ function renderizarMiembros(miembros) {
         lista.appendChild(li);
     });
 }
+
+function editRecompensas() {
+    const editarBtns = document.querySelectorAll('.btn-outline-primary[title="Modificar"]');
+
+    editarBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const li = btn.closest('li');
+            const nombre = li.querySelector('strong').textContent.trim();
+            const descripcion = li.querySelector('small')?.textContent.trim() || '';
+            const costoTexto = li.querySelector('strong').nextSibling.textContent;
+            const costo = parseInt(costoTexto.match(/\d+/)?.[0] || 0);
+            const id = btn.getAttribute('data-id');
+
+            document.getElementById('edit-id').value = id;
+            document.getElementById('edit-nombre').value = nombre;
+            document.getElementById('edit-costo_puntos').value = costo;
+            document.getElementById('edit-descripcion').value = descripcion;
+        });
+    });
+}
+
+function eliminarRecompensa() {
+    const form = document.getElementById("formEliminarRecompensa");
+    const modal = document.getElementById("modalConfirmarEliminar");
+
+    form.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(form);
+        const id = formData.get("id_recompensa");
+        const li = document.querySelector(`#reward-list li[data-id="${id}"]`);
+
+        fetch(form.action, {
+            method: "POST",
+            body: formData
+        })
+            .then(res => res.text())
+            .then(() => {
+                // Fade out
+                li.style.transition = "opacity 0.4s ease, height 0.4s ease";
+                li.style.opacity = "0";
+                li.style.height = "0";
+                li.style.padding = "0";
+                li.style.margin = "0";
+                setTimeout(() => li.remove(), 400);
+
+                // Cerrar modal
+                const bsModal = bootstrap.Modal.getInstance(modal);
+                bsModal.hide();
+
+                // Mostrar alerta
+                const alertContainer = document.querySelector(".container.mt-4");
+                if (alertContainer) {
+                    alertContainer.innerHTML = `
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+              🗑️ Recompensa eliminada correctamente.
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+            </div>
+          `;
+                }
+            })
+            .catch(err => {
+                console.error("Error al eliminar recompensa:", err);
+            });
+    });
+}
+
+function initConfirmarEliminarRecompensa() {
+    const botones = document.querySelectorAll(".btn-confirmar-eliminar");
+    const inputId = document.getElementById("eliminar-id");
+    const nombreSpan = document.getElementById("nombreRecompensaEliminar");
+
+    botones.forEach(btn => {
+        btn.addEventListener("click", () => {
+            const id = btn.getAttribute("data-id");
+            const nombre = btn.getAttribute("data-nombre");
+
+            inputId.value = id;
+            nombreSpan.textContent = `"${nombre}"`;
+        });
+    });
+}
+
+function crearRecompensaConModal() {
+    const form = document.getElementById("formCrearRecompensa");
+    const modal = document.getElementById("modalCrearRecompensa");
+
+    form.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(form);
+
+        fetch(form.action, {
+            method: "POST",
+            body: formData
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // Crear el nuevo <li>
+                    const nuevoLi = document.createElement("li");
+                    nuevoLi.className = "list-group-item d-flex justify-content-between align-items-center";
+                    nuevoLi.setAttribute("data-id", data.id_recompensa);
+                    nuevoLi.innerHTML = `
+  <div>
+    <strong>${data.titulo}</strong> - ${data.costo} pts
+    ${data.descripcion ? `<br><small class="text-muted">${data.descripcion}</small>` : ""}
+  </div>
+  <div class="reward-actions">
+    <button class="btn btn-sm btn-outline-primary admin-only me-1" title="Modificar"
+      data-bs-toggle="modal" data-bs-target="#modalEditarRecompensa"
+      data-id="${data.id_recompensa}">
+      <i class="bi bi-pencil-square"></i>
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-danger admin-only btn-confirmar-eliminar"
+      data-id="${data.id_recompensa}" data-nombre="${data.titulo}"
+      data-bs-toggle="modal" data-bs-target="#modalConfirmarEliminar" title="Eliminar">
+      <i class="bi bi-trash"></i>
+    </button>
+  </div>
+`;
+
+
+                    // Agregar al listado
+                    document.getElementById("reward-list").prepend(nuevoLi);
+                    editRecompensas(); // vuelve a activar el botón de editar
+                    initConfirmarEliminarRecompensa(); // vuelve a activar el botón de eliminar
+
+
+                    // Cerrar modal
+                    const bsModal = bootstrap.Modal.getInstance(modal);
+                    bsModal.hide();
+                    form.reset();
+
+                    // Mostrar alerta
+                    const alertContainer = document.querySelector(".container.mt-4");
+                    if (alertContainer) {
+                        alertContainer.innerHTML = `
+              <div class="alert alert-success alert-dismissible fade show" role="alert">
+                🎁 Recompensa creada con éxito.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+              </div>
+            `;
+                    }
+                } else {
+                    alert("Error al crear recompensa.");
+                }
+            })
+            .catch(err => {
+                console.error("Error:", err);
+            });
+    });
+}
+
+
+
+
+
+
+
+
 
