@@ -24,10 +24,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $conn->beginTransaction();
 
-            // eliminar tarea
-            $stmt = $conn->prepare("DELETE FROM tarea WHERE id_tarea = :id_tarea AND grupo_id = :id_grupo");
-            $stmt->execute([':id_tarea' => $id_tarea, ':id_grupo' => $id_grupo]);
-
             // historial (estadoTarea = 3 → eliminada)
             $stmt = $conn->prepare("INSERT INTO historialgrupousuario 
                 (fecha, puntosOtorgados, puntosCanjeados, estadoTarea, grupo_usuario_id, tarea_id_tarea, recompensa_id_recompensa)
@@ -36,6 +32,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':gu_id_admin' => $guAdmin['id_grupo_usuario'],
                 ':tid' => $id_tarea
             ]);
+
+            // eliminar tarea
+            $stmt = $conn->prepare("DELETE FROM tarea WHERE id_tarea = :id_tarea AND grupo_id = :id_grupo");
+            $stmt->execute([':id_tarea' => $id_tarea, ':id_grupo' => $id_grupo]);
 
             $conn->commit();
 
