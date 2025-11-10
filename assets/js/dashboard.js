@@ -134,7 +134,19 @@ function handleGroupCards() {
   document.addEventListener("click", (e) => {
     const card = e.target.closest(".group-card");
     if (!card) return;
+
     const id = card.dataset.groupId;
-    window.location.href = `/grupo/ver_grupo.php?id=${encodeURIComponent(id)}`;
+    const section = card.closest(".groups-grid")?.dataset.section;
+
+    let folder = "";
+    if (section === "administrador") folder = "/administrador";
+    else if (section === "colaborador") folder = "/colaborador";
+
+    // Usa la ruta dinámica generada por PHP
+    if (folder) {
+      window.location.href = `${BASE_URL}${folder}/grupo/ver_grupo.php?id=${encodeURIComponent(id)}`;
+    } else {
+      console.warn("No se pudo determinar la sección del grupo clickeado");
+    }
   });
 }

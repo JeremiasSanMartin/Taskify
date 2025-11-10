@@ -1,4 +1,5 @@
 <?php
+
 session_start();
 
 // Evitar que el navegador guarde en caché
@@ -65,6 +66,16 @@ if ($userEmail) {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Dashboard CSS -->
     <link rel="stylesheet" href="assets/css/dashboard.css">
+
+    <script>
+        // Detecta automáticamente si estás en localhost o en el hosting
+        const BASE_URL = "<?=
+            (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
+            . '://' . $_SERVER['HTTP_HOST']
+            . rtrim(dirname($_SERVER['SCRIPT_NAME']), '/')
+            ?>";
+        console.log(BASE_URL);
+    </script>
 </head>
 
 <body class="dashboard-body">
@@ -146,7 +157,7 @@ if ($userEmail) {
                         <h3 class="card-title">Mis Grupos (Propietario)</h3>
                         <a href="#" class="card-action">Gestionar todos</a>
                     </div>
-                    <div class="groups-grid">
+                    <div class="groups-grid" data-section="colaborador">
                         <?php if (empty($grupos_propios)): ?>
                             <p class="text-muted">Aún no has creado ningún grupo.</p>
                         <?php else: ?>
@@ -182,7 +193,7 @@ if ($userEmail) {
                         <div class="card-header">
                             <h3 class="card-title">Grupos donde Participo</h3>
                         </div>
-                        <div class="groups-grid">
+                        <div class="groups-grid" data-section="colaborador">
                             <?php foreach ($grupos_participa as $grupo): ?>
                                 <div class="group-card <?= strtolower($grupo['tipo']) ?>"
                                     data-group-id="<?= $grupo['id_grupo'] ?>">
