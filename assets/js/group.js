@@ -222,7 +222,7 @@ function actualizarMiembrosPeriodicamente() {
     if (!grupoId) return;
 
     setInterval(() => {
-        fetch(`/Taskify/administrador/grupo/miembros_ajax.php?id=${grupoId}`)
+        fetch(`miembros_ajax.php?id=${grupoId}`)
             .then(res => res.json())
             .then(data => renderizarMiembros(data))
             .catch(err => console.error("Error al actualizar miembros:", err));

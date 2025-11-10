@@ -135,6 +135,6 @@ function handleGroupCards() {
     const card = e.target.closest(".group-card");
     if (!card) return;
     const id = card.dataset.groupId;
-    window.location.href = `/Taskify/colaborador/grupo/ver_grupo.php?id=${encodeURIComponent(id)}`;
+    window.location.href = `grupo/ver_grupo.php?id=${encodeURIComponent(id)}`;
   });
 }

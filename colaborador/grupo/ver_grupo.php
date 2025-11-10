@@ -99,7 +99,7 @@ $historial = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         <!-- Menú del grupo -->
         <div class="sidebar-menu">
-            <a href="/Taskify/index.php" class="menu-item external">
+            <a href="../../index.php" class="menu-item external">
                 <i class="bi bi-arrow-left-circle"></i>
                 <span>Volver al Dashboard</span>
             </a>

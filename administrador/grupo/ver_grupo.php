@@ -7,7 +7,7 @@ header("Pragma: no-cache");
 
 // Verificar sesión
 if (!isset($_SESSION['nombre']) || !isset($_SESSION['email'])) {
-    header("Location: /Taskify/index.php");
+    header("Location: ../../index.php");
     exit();
 }
 

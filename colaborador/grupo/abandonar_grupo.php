@@ -6,7 +6,7 @@ $grupo_id = $_POST['grupo_id'] ?? null;
 $usuario_id = $_POST['usuario_id'] ?? null;
 
 if (!$grupo_id || !$usuario_id) {
-    header("Location: /Taskify/index.php?error=datos_incompletos");
+    header("Location: ../../index.php?error=datos_incompletos");
     exit();
 }
 
@@ -21,5 +21,5 @@ $stmt->execute([
     ':usuario' => $usuario_id
 ]);
 
-header("Location: /Taskify/index.php?mensaje=grupo_abandonado");
+header("Location: ../../index.php?mensaje=grupo_abandonado");
 exit();

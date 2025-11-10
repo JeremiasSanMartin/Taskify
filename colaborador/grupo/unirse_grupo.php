@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ");
                 $stmt->execute([':uid' => $usuario_id, ':gid' => $grupo_id]);
 
-                header("Location: /Taskify/colaborador/grupo/ver_grupo.php?id=$grupo_id");
+                header("Location: ver_grupo.php?id=$grupo_id");
                 exit();
             }
         }
