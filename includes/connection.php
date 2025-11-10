@@ -1,21 +1,34 @@
 <?php
-// connection.php
-// Archivo centralizado de conexión a la base de datos Taskify
-// Estos valores se tendran que modificar si la pagina se sube a algun luhar como hostinger
-$host = "localhost";      
-$user = "root";           
-$password = "";          
-$database = "taskify";    // Nombre de la base de datos
+// config/connection.php
+// Conexión PDO centralizada (lee credenciales desde db_config.php)
+//en db_config.php debe haber datos de este estilo
+
+/*
+
+<?php
+// config/db_config.php
+// Datos locales o del servidor (NO subir a GitHub)
+
+return [
+    'host' => 'localhost',
+    'user' => 'root',
+    'password' => '',
+    'database' => 'taskify'
+];
+
+*/
+
+$config = include __DIR__ . '/db_config.php';
+
+$host = $config['host'];
+$user = $config['user'];
+$password = $config['password'];
+$database = $config['database'];
 
 try {
-    // Crear conexión PDO
     $conn = new PDO("mysql:host=$host;dbname=$database;charset=utf8mb4", $user, $password);
-
-    // Configurar atributos de error
     $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
 } catch (PDOException $e) {
-    // Si hay error, mostrar mensaje
     die("Error de conexión: " . $e->getMessage());
 }
 ?>

@@ -1,3 +1,4 @@
 /vendor/
 /auth/.env
 .DS_Store
+db_config.php
