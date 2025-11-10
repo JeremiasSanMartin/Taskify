@@ -92,9 +92,9 @@ try {
     }
 
     if ($rol === 'administrador') {
-        header("Location: /Taskify/administrador/grupo/ver_grupo.php?id=$id_grupo");
+        header("Location: ver_grupo.php?id=$id_grupo");
     } else {
-        header("Location: /Taskify/colaborador/grupo/ver_grupo.php?id=$id_grupo");
+        header("Location: ver_grupo.php?id=$id_grupo");
     }
     exit;
 } catch (PDOException $e) {
