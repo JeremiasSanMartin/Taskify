@@ -19,11 +19,13 @@ function initGroupPage() {
     editarTareaConModal();
     eliminarTareaConModal();
     configurarBotonCompletarTarea();
+    crearRecompensa();
+    controlFormCrearRecompensa();
+    prellenarModalEditarRecompensa();
+    editarRecompensa();
+    eliminarRecompensa();
+    mostrarAlerta();
 
-    //RECOMPENSAS
-    editRecompensas();
-    initConfirmarEliminarRecompensa();
-    crearRecompensaConModal();
 }
 
 // --- Navegación lateral ---
@@ -465,152 +467,267 @@ function renderizarMiembros(miembros) {
     });
 }
 
-function editRecompensas() {
-    const editarBtns = document.querySelectorAll('.btn-outline-primary[title="Modificar"]');
 
-    editarBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const li = btn.closest('li');
-            const nombre = li.querySelector('strong').textContent.trim();
-            const descripcion = li.querySelector('small')?.textContent.trim() || '';
-            const costoTexto = li.querySelector('strong').nextSibling.textContent;
-            const costo = parseInt(costoTexto.match(/\d+/)?.[0] || 0);
-            const id = btn.getAttribute('data-id');
+function prellenarModalEditarRecompensa() {
+    const modalEditar = document.getElementById("modalEditarRecompensa");
 
-            document.getElementById('edit-id').value = id;
-            document.getElementById('edit-nombre').value = nombre;
-            document.getElementById('edit-costo_puntos').value = costo;
-            document.getElementById('edit-descripcion').value = descripcion;
-        });
+    modalEditar.addEventListener("show.bs.modal", (event) => {
+        const button = event.relatedTarget;
+        document.getElementById("edit-id").value = button.dataset.id;
+        document.getElementById("edit-nombre").value = button.dataset.nombre;
+        document.getElementById("edit-costo").value = button.dataset.costo;
+        document.getElementById("edit-descripcion").value = button.dataset.descripcion;
+        document.getElementById("edit-disponibilidad").value = button.dataset.disponibilidad;
+        ;
     });
 }
+
+function editarRecompensa() {
+    const formEditar = document.getElementById("formEditarRecompensa");
+
+    if (formEditar) {
+        formEditar.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(formEditar);
+            try {
+                const response = await fetch("/Taskify/administrador/recompensas/editar_recompensa.php", {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    // actualizar el li en la lista
+                    const li = document.querySelector(`#reward-list li[data-id="${data.id_recompensa}"]`);
+                    if (li) {
+                        // actualizar título
+                        li.querySelector("strong").textContent = data.titulo;
+
+                        // actualizar costo
+                        const costoSpan = li.querySelector(".points");
+                        if (costoSpan) {
+                            costoSpan.textContent = data.costo + " pts";
+                        }
+
+                        // limpiar descripción, stock/badge y saltos de línea
+                        li.querySelectorAll("small.text-muted, span.badge, br").forEach(el => el.remove());
+
+
+                        // agregar nueva descripción si existe
+                        if (data.descripcion) {
+                            const br = document.createElement("br");
+                            const desc = document.createElement("small");
+                            desc.classList.add("text-muted");
+                            desc.textContent = data.descripcion;
+                            li.querySelector("div").appendChild(br);
+                            li.querySelector("div").appendChild(desc);
+                        }
+
+                        // actualizar disponibilidad visual
+                        if (data.disponibilidad > 0) {
+                            // quitar estilos apagados
+                            li.classList.remove("text-muted", "opacity-75", "bg-light");
+
+                            const stock = document.createElement("small");
+                            stock.classList.add("text-muted");
+                            stock.textContent = "Stock: " + data.disponibilidad;
+                            li.querySelector("div").appendChild(document.createElement("br"));
+                            li.querySelector("div").appendChild(stock);
+                        } else {
+                            // aplicar estilos apagados
+                            li.classList.add("text-muted", "opacity-75", "bg-light");
+
+                            const badge = document.createElement("span");
+                            badge.classList.add("badge", "bg-secondary");
+                            badge.textContent = "No disponible";
+                            li.querySelector("div").appendChild(document.createElement("br"));
+                            li.querySelector("div").appendChild(badge);
+                        }
+
+                        // 👉 actualizar atributos del botón editar
+                        const btnEditar = li.querySelector("button[title='Modificar']");
+                        if (btnEditar) {
+                            btnEditar.dataset.id = data.id_recompensa;
+                            btnEditar.dataset.nombre = data.titulo;
+                            btnEditar.dataset.costo = data.costo;
+                            btnEditar.dataset.descripcion = data.descripcion || '';
+                            btnEditar.dataset.disponibilidad = data.disponibilidad;
+                        }
+                    }
+
+                    // cerrar modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById("modalEditarRecompensa"));
+                    modal.hide();
+
+                    mostrarAlerta("✅ Recompensa editada correctamente", "success");
+                } else {
+                    mostrarAlerta("❌ Error: " + data.error, "danger");
+                }
+            } catch (err) {
+                mostrarAlerta("❌ Error inesperado al editar", "danger");
+            }
+        });
+    }
+}
+
+
+
 
 function eliminarRecompensa() {
-    const form = document.getElementById("formEliminarRecompensa");
-    const modal = document.getElementById("modalConfirmarEliminar");
+    const formEliminar = document.getElementById("formEliminarRecompensa");
 
-    form.addEventListener("submit", (e) => {
-        e.preventDefault();
-
-        const formData = new FormData(form);
-        const id = formData.get("id_recompensa");
-        const li = document.querySelector(`#reward-list li[data-id="${id}"]`);
-
-        fetch(form.action, {
-            method: "POST",
-            body: formData
-        })
-            .then(res => res.text())
-            .then(() => {
-                // Fade out
-                li.style.transition = "opacity 0.4s ease, height 0.4s ease";
-                li.style.opacity = "0";
-                li.style.height = "0";
-                li.style.padding = "0";
-                li.style.margin = "0";
-                // Cerrar modal
-                const bsModal = bootstrap.Modal.getInstance(modal);
-                bsModal.hide();
-
-                // Mostrar alerta
-                const alertContainer = document.querySelector(".container.mt-4");
-                if (alertContainer) {
-                    alertContainer.innerHTML = `
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-              🗑️ Recompensa eliminada correctamente.
-              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-            </div>
-          `;
-                }
-            })
-            .catch(err => {
-                console.error("Error al eliminar recompensa:", err);
-            });
+    // 👉 capturar el click en el botón eliminar y abrir el modal con el id
+    document.addEventListener("click", (e) => {
+        const btn = e.target.closest("button[title='Eliminar']");
+        if (btn) {
+            document.getElementById("delete-id").value = btn.dataset.id;
+            document.getElementById("delete-nombre").value = btn.dataset.nombre;
+        }
     });
-}
 
-function initConfirmarEliminarRecompensa() {
-    const botones = document.querySelectorAll(".btn-confirmar-eliminar");
-    const inputId = document.getElementById("eliminar-id");
-    const nombreSpan = document.getElementById("nombreRecompensaEliminar");
+    // 👉 manejar el submit del modal
+    if (formEliminar) {
+        formEliminar.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const formData = new FormData(formEliminar);
 
-    botones.forEach(btn => {
-        btn.addEventListener("click", () => {
-            const id = btn.getAttribute("data-id");
-            const nombre = btn.getAttribute("data-nombre");
+            try {
+                const resp = await fetch("/Taskify/administrador/recompensas/eliminar_recompensa.php", {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await resp.json();
 
-            inputId.value = id;
-            nombreSpan.textContent = `"${nombre}"`;
-        });
-    });
-}
-
-function crearRecompensaConModal() {
-    const form = document.getElementById("formCrearRecompensa");
-    const modal = document.getElementById("modalCrearRecompensa");
-
-    form.addEventListener("submit", (e) => {
-        e.preventDefault();
-
-        const formData = new FormData(form);
-
-        fetch(form.action, {
-            method: "POST",
-            body: formData
-        })
-            .then(res => res.json())
-            .then(data => {
                 if (data.success) {
-                    // Crear el nuevo <li>
-                    const nuevoLi = document.createElement("li");
-                    nuevoLi.className = "list-group-item d-flex justify-content-between align-items-center";
-                    nuevoLi.setAttribute("data-id", data.id_recompensa);
-                    nuevoLi.innerHTML = `
-  <div>
-    <strong>${data.titulo}</strong> - ${data.costo} pts
-    ${data.descripcion ? `<br><small class="text-muted">${data.descripcion}</small>` : ""}
-  </div>
-  <div class="reward-actions">
-    <button class="btn btn-sm btn-outline-primary admin-only me-1" title="Modificar"
-      data-bs-toggle="modal" data-bs-target="#modalEditarRecompensa"
-      data-id="${data.id_recompensa}">
-      <i class="bi bi-pencil-square"></i>
-    </button>
-    <button type="button" class="btn btn-sm btn-outline-danger admin-only btn-confirmar-eliminar"
-      data-id="${data.id_recompensa}" data-nombre="${data.titulo}"
-      data-bs-toggle="modal" data-bs-target="#modalConfirmarEliminar" title="Eliminar">
-      <i class="bi bi-trash"></i>
-    </button>
-  </div>
-`;
+                    const li = document.querySelector(`#reward-list li[data-id="${data.id_recompensa}"]`);
+                    if (li) {
+                        if (data.disponibilidad === -1) {
+                            // eliminada definitivamente → remover del DOM
+                            li.remove();
+                        } else if (data.disponibilidad === 0) {
+                            // desactivada → actualizar visualmente
+                            li.classList.add("text-muted", "opacity-75", "bg-light");
+                            li.querySelectorAll("small.text-muted, span.badge, br").forEach(el => el.remove());
 
-                    document.getElementById("reward-list").prepend(nuevoLi);
-                    editRecompensas(); // vuelve a activar el botón de editar
-                    initConfirmarEliminarRecompensa(); // vuelve a activar el botón de eliminar
+                            const badge = document.createElement("span");
+                            badge.classList.add("badge", "bg-secondary");
+                            badge.textContent = "No disponible";
+                            li.querySelector("div").appendChild(document.createElement("br"));
+                            li.querySelector("div").appendChild(badge);
 
+                            // actualizar dataset del botón editar
+                            const btnEditar = li.querySelector("button[title='Modificar']");
+                            if (btnEditar) {
+                                btnEditar.dataset.disponibilidad = 0;
+                            }
 
-                    // Cerrar modal
-                    const bsModal = bootstrap.Modal.getInstance(modal);
-                    bsModal.hide();
-                    form.reset();
-
-                    // Mostrar alerta
-                    const alertContainer = document.querySelector(".container.mt-4");
-                    if (alertContainer) {
-                        alertContainer.innerHTML = `
-              <div class="alert alert-success alert-dismissible fade show" role="alert">
-                🎁 Recompensa creada con éxito.
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-              </div>
-            `;
+                            // desactivar botón eliminar
+                            const btnEliminar = li.querySelector("button[title='Eliminar']");
+                            if (btnEliminar) {
+                                btnEliminar.disabled = true;
+                            }
+                        }
                     }
+
+                    // cerrar modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById("modalEliminarRecompensa"));
+                    modal.hide();
+
+                    mostrarAlerta("✅ Recompensa eliminada correctamente", "success");
                 } else {
-                    alert("Error al crear recompensa.");
+                    mostrarAlerta("❌ Error: " + data.error, "danger");
                 }
-            })
-            .catch(err => {
-                console.error("Error:", err);
+            } catch (err) {
+                mostrarAlerta("❌ Error inesperado al eliminar", "danger");
+            }
+        });
+    }
+}
+
+
+
+function crearRecompensa() {
+    const formCrear = document.getElementById("formCrearRecompensa");
+    const modalCrear = document.getElementById("modalCrearRecompensa");
+
+    if (!formCrear) return;
+
+    formCrear.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(formCrear);
+
+        try {
+            const resp = await fetch(formCrear.action, {
+                method: "POST",
+                body: formData
             });
+            const data = await resp.json();
+
+            if (data.success) {
+                // Crear el <li> nuevo
+                const li = document.createElement("li");
+                li.className = `list-group-item d-flex justify-content-between align-items-center ${data.disponibilidad == 0 ? 'text-muted bg-light' : ''}`;
+                li.dataset.id = data.id_recompensa;
+
+                li.innerHTML = `
+                    <div>
+                        <strong>${data.titulo}</strong> - <span class="points">${data.costo} pts</span>
+                        ${data.descripcion ? `<br><small class="text-muted">${data.descripcion}</small>` : ""}
+                        ${data.disponibilidad > 0
+                        ? `<br><small class="text-muted">Stock: ${data.disponibilidad}</small>`
+                        : `<br><span class="badge bg-secondary">No disponible</span>`}
+                    </div>
+                    <div class="reward-actions">
+                        <button
+                            class="btn btn-sm btn-outline-primary admin-only me-1"
+                            title="Modificar"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalEditarRecompensa"
+                            data-id="${data.id_recompensa}"
+                            data-nombre="${data.titulo}"
+                            data-costo="${data.costo}"
+                            data-descripcion="${data.descripcion || ''}"
+                            data-disponibilidad="${data.disponibilidad}"
+                        >
+                            <i class="bi bi-pencil-square"></i>
+                        </button>
+                        <button
+                            class="btn btn-sm btn-outline-danger admin-only"
+                            title="Eliminar"
+                            data-id="${data.id_recompensa}"
+                            data-nombre="${data.titulo}"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalEliminarRecompensa"
+                            ${data.disponibilidad == 0 ? 'disabled' : ''}
+                        >
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                `;
+
+                // Insertar al inicio del listado
+                const list = document.getElementById("reward-list");
+                if (list) list.prepend(li);
+
+                // Re-activar handlers de editar y eliminar
+                if (typeof editarRecompensa === "function") editarRecompensa();
+                if (typeof eliminarRecompensa === "function") eliminarRecompensa();
+
+                // Cerrar modal y resetear form
+                const modal = bootstrap.Modal.getInstance(modalCrear);
+                if (modal) modal.hide();
+                formCrear.reset();
+
+                mostrarAlerta("✅ Recompensa creada con éxito", "success");
+            } else {
+                mostrarAlerta("❌ Error: " + (data.error || "No se pudo crear la recompensa"), "danger");
+            }
+        } catch (err) {
+            console.error(err);
+            mostrarAlerta("❌ Error inesperado al crear", "danger");
+        }
     });
 }
 
@@ -636,6 +753,45 @@ function asegurarMensajeVacio(listId, placeholderId, mensaje) {
 
 
 
+
+
+
+function controlFormCrearRecompensa() {
+
+    const costoInput = document.getElementById("crear-costo");
+    const descripcionInput = document.getElementById("crear-descripcion");
+
+    costoInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault(); // evita el submit
+            descripcionInput.focus(); // mueve el foco al textarea
+        }
+    });
+}
+
+function mostrarAlerta(texto, tipo = "success") {
+
+    if (!mensaje) return;
+    const alertContainer = document.querySelector(".dashboard-content");
+    if (alertContainer) {
+        const wrapper = document.createElement("div");
+        wrapper.innerHTML = `
+      <div class="alert alert-${tipo} alert-dismissible fade show mt-3" role="alert">
+        ${texto}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+      </div>
+    `;
+        alertContainer.prepend(wrapper);
+        setTimeout(() => {
+            const alert = wrapper.querySelector(".alert");
+            if (alert) {
+                alert.classList.remove("show");
+                alert.classList.add("fade");
+                setTimeout(() => wrapper.remove(), 500);
+            }
+        }, 4000);
+    }
+}
 
 
 

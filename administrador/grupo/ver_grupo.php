@@ -143,7 +143,7 @@ $recompensas = [];
 
 try {
     $stmt = $conn->prepare("
-        SELECT id_recompensa, nombre AS titulo, descripcion, costo_puntos AS costo
+        SELECT id_recompensa, nombre AS titulo, descripcion, costo_puntos AS costo, disponibilidad
         FROM recompensa
         WHERE grupo_id = :grupo_id
         ORDER BY id_recompensa DESC
@@ -201,7 +201,7 @@ try {
                 <i class="bi bi-arrow-left-circle"></i>
                 <span>Volver al Dashboard</span>
             </a>
-            <a href="#" class="menu-item active" data-section="miembros">
+            <a href="#" class="menu-item" data-section="miembros">
                 <i class="bi bi-people"></i>
                 <span>Miembros</span>
             </a>
@@ -390,40 +390,46 @@ try {
                     </div>
 
                     <ul id="reward-list" class="list-group mt-4">
-                        <?php if (!empty($recompensas)): ?>
-                            <?php foreach ($recompensas as $r): ?>
-                                <li class="list-group-item d-flex justify-content-between align-items-center"
-                                    data-id="<?= (int) $r['id_recompensa'] ?>">
-                                    <div>
-                                        <strong><?= htmlspecialchars($r['titulo']) ?></strong> -
-                                        <?= (int) ($r['costo'] ?? $r['costo_puntos']) ?> pts
-                                        <?php if (!empty($r['descripcion'])): ?>
-                                            <br><small class="text-muted"><?= htmlspecialchars($r['descripcion']) ?></small>
-                                        <?php endif; ?>
-                                    </div>
-                                    <div class="reward-actions">
-                                        <button class="btn btn-sm btn-outline-primary admin-only me-1" title="Modificar"
-                                            data-bs-toggle="modal" data-bs-target="#modalEditarRecompensa"
-                                            data-id="<?= (int) $r['id_recompensa'] ?>"
-                                            data-nombre="<?= htmlspecialchars($r['titulo'] ?? $r['nombre'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-                                            data-descripcion="<?= htmlspecialchars($r['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-                                            data-costo="<?= isset($r['costo']) ? (int) $r['costo'] : (isset($r['costo_puntos']) ? (int) $r['costo_puntos'] : 0) ?>">
-                                            <i class="bi bi-pencil-square"></i>
-                                        </button>
+                        <?php foreach ($recompensas as $r): ?>
+                            <?php if ($r['disponibilidad'] == -1)
+                                continue; // ocultar eliminadas ?>
 
-                                        <button type="button"
-                                            class="btn btn-sm btn-outline-danger admin-only btn-confirmar-eliminar"
-                                            data-id="<?= (int) $r['id_recompensa'] ?>"
-                                            data-nombre="<?= htmlspecialchars($r['titulo']) ?>" data-bs-toggle="modal"
-                                            data-bs-target="#modalConfirmarEliminar" title="Eliminar">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </div>
-                                </li>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <li id="rewards-empty-placeholder" class="list-group-item text-muted">
-                                Todavía no hay recompensas creadas.
+                            <li class="list-group-item d-flex justify-content-between align-items-center <?= $r['disponibilidad'] == 0 ? 'text-muted bg-light' : '' ?>"
+                                data-id="<?= $r['id_recompensa'] ?>">
+                                <div>
+                                    <strong><?= htmlspecialchars($r['titulo']) ?></strong> -
+                                    <span class="points"><?= $r['costo'] ?> pts</span>
+
+                                    <?php if (!empty($r['descripcion'])): ?>
+                                        <br><small class="text-muted"><?= htmlspecialchars($r['descripcion']) ?></small>
+                                    <?php endif; ?>
+
+                                    <?php if ($r['disponibilidad'] > 0): ?>
+                                        <br><small class="text-muted">Stock: <?= $r['disponibilidad'] ?></small>
+                                    <?php else: ?>
+                                        <br><span class="badge bg-secondary">No disponible</span>
+                                    <?php endif; ?>
+                                </div>
+
+                                <div class="reward-actions">
+                                    <!-- Modificar recompensa (siempre activo) -->
+                                    <button class="btn btn-sm btn-outline-primary admin-only me-1" title="Modificar"
+                                        data-bs-toggle="modal" data-bs-target="#modalEditarRecompensa"
+                                        data-id="<?= $r['id_recompensa'] ?>"
+                                        data-nombre="<?= htmlspecialchars($r['titulo']) ?>" data-costo="<?= $r['costo'] ?>"
+                                        data-descripcion="<?= htmlspecialchars($r['descripcion'] ?? '') ?>"
+                                        data-disponibilidad="<?= $r['disponibilidad'] ?>">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+
+                                    <!-- Eliminar recompensa (solo si está activa) -->
+                                    <button class="btn btn-sm btn-outline-danger admin-only" title="Eliminar"
+                                        data-id="<?= $r['id_recompensa'] ?>"
+                                        data-nombre="<?= htmlspecialchars($r['titulo']) ?>" data-bs-toggle="modal"
+                                        data-bs-target="#modalEliminarRecompensa" <?= $r['disponibilidad'] == 0 ? 'disabled' : '' ?>>
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
                             </li>
                         <?php endif; ?>
                     </ul>
@@ -858,7 +864,8 @@ try {
             <form id="formCrearRecompensa" class="modal-content" method="POST"
                 action="../recompensas/crear_recompensa.php">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="crearRecompensaLabel"><i class="bi bi-gift-fill"></i> Crear recompensa
+                    <h5 class="modal-title" id="crearRecompensaLabel">
+                        <i class="bi bi-gift-fill"></i> Crear recompensa
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
@@ -880,6 +887,16 @@ try {
                         <label for="crear-descripcion" class="form-label">Descripción</label>
                         <textarea name="descripcion" id="crear-descripcion" class="form-control" rows="2"></textarea>
                     </div>
+
+                    <!-- Nuevo campo: stock disponible -->
+                    <div class="mb-3">
+                        <label for="crear-stock" class="form-label">Stock inicial</label>
+                        <input type="number" name="disponibilidad" id="crear-stock" class="form-control" min="0"
+                            required>
+                        <small class="form-text text-muted">
+                            Cantidad de veces que esta recompensa puede ser canjeada.
+                        </small>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-success">Guardar</button>
@@ -889,35 +906,44 @@ try {
         </div>
     </div>
 
-    <!-- Modal Editar recompensa -->
-    <div class="modal fade" id="modalEditarRecompensa" tabindex="-1" aria-labelledby="modalEditarLabel"
+
+    <!-- Modal: Editar recompensa -->
+    <div class="modal fade" id="modalEditarRecompensa" tabindex="-1" aria-labelledby="editarRecompensaLabel"
         aria-hidden="true">
         <div class="modal-dialog">
-            <form id="formEditarRecompensa" method="POST" action="../recompensas/editar_recompensa.php"
-                class="modal-content">
+            <form id="formEditarRecompensa" class="modal-content" method="POST"
+                action="../recompensas/editar_recompensa.php">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="modalEditarLabel"><i class="bi bi-pencil-square"></i>
-                        Editar recompensa</h5>
+                    <h5 class="modal-title" id="editarRecompensaLabel"><i class="bi bi-pencil-square"></i> Editar
+                        recompensa</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
                 <div class="modal-body">
-                    <input type="hidden" name="id_recompensa" id="edit-id">
                     <input type="hidden" name="id_grupo" value="<?= $id_grupo ?>">
+                    <input type="hidden" name="id_recompensa" id="edit-id">
 
                     <div class="mb-3">
-                        <label for="edit-nombre" class="form-label">Nombre</label>
+                        <label for="edit-nombre" class="form-label">Título</label>
                         <input type="text" name="nombre" id="edit-nombre" class="form-control" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="edit-costo_puntos" class="form-label">Costo en puntos</label>
-                        <input type="number" name="costo_puntos" id="edit-costo_puntos" class="form-control" min="1"
-                            required>
+                        <label for="edit-costo" class="form-label">Costo en puntos</label>
+                        <input type="number" name="costo_puntos" id="edit-costo" class="form-control" min="1" required>
                     </div>
 
                     <div class="mb-3">
                         <label for="edit-descripcion" class="form-label">Descripción</label>
-                        <textarea name="descripcion" id="edit-descripcion" class="form-control" rows="3"></textarea>
+                        <textarea name="descripcion" id="edit-descripcion" class="form-control" rows="2"></textarea>
+                    </div>
+
+                    <!-- Campo de stock (disponibilidad) -->
+                    <div class="mb-3">
+                        <label for="edit-disponibilidad" class="form-label">Disponibilidad</label>
+                        <input type="number" name="disponibilidad" id="edit-disponibilidad" class="form-control" min="0"
+                            required>
+                        <small class="form-text text-muted">Cantidad de veces que puede canjearse esta
+                            recompensa.</small>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -928,25 +954,24 @@ try {
         </div>
     </div>
 
+
     <!-- Modal de confirmación de eliminación -->
-    <div class="modal fade" id="modalConfirmarEliminar" tabindex="-1" aria-labelledby="modalEliminarLabel"
-        aria-hidden="true">
+    <div class="modal fade" id="modalEliminarRecompensa" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
-            <form method="POST" action="../recompensas/eliminar_recompensa.php" class="modal-content"
-                id="formEliminarRecompensa">
+            <form id="formEliminarRecompensa" class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="modalEliminarLabel"><i class="bi bi-trash"></i> Eliminar recompensa</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    <h5 class="modal-title">Eliminar recompensa</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p>¿Estás seguro de que querés eliminar <strong id="nombreRecompensaEliminar">esta
-                            recompensa</strong>?</p>
-                    <input type="hidden" name="id_recompensa" id="eliminar-id">
+                    <p>¿Seguro que quieres eliminar esta recompensa?</p>
+                    <input type="hidden" name="id_recompensa" id="delete-id">
+                    <input type="hidden" name="nombre_recompensa" id="delete-nombre">
                     <input type="hidden" name="id_grupo" value="<?= $id_grupo ?>">
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-danger">Eliminar</button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
                 </div>
             </form>
         </div>
