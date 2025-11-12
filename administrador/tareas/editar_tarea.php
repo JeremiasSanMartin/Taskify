@@ -1,20 +1,20 @@
 <?php
 session_start();
 require_once '../../includes/connection.php';
+header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $id_tarea   = $_POST['id_tarea'] ?? null;
-    $id_grupo   = $_POST['id_grupo'] ?? null;
-    $titulo     = $_POST['titulo'] ?? '';
-    $descripcion= $_POST['descripcion'] ?? '';
-    $puntos     = $_POST['puntos'] ?? 0;
+    $id_tarea = $_POST['id_tarea'] ?? null;
+    $id_grupo = $_POST['id_grupo'] ?? null;
+    $titulo = $_POST['titulo'] ?? '';
+    $descripcion = $_POST['descripcion'] ?? '';
+    $puntos = $_POST['puntos'] ?? 0;
     $fecha_limite = $_POST['fecha_limite'] ?? null;
-    $asignadoA  = $_POST['asignadoA'] ?? null;
-    $userEmail  = $_SESSION['email'] ?? null;
+    $asignadoA = $_POST['asignadoA'] ?? null;
+    $userEmail = $_SESSION['email'] ?? null;
 
     if ($id_tarea && $id_grupo && $titulo && $descripcion && $puntos > 0 && $fecha_limite && $asignadoA && $userEmail) {
         try {
-            // obtener admin actual
             $stmt = $conn->prepare("SELECT id_usuario FROM usuario WHERE email = :email");
             $stmt->execute([':email' => $userEmail]);
             $id_admin = $stmt->fetchColumn();
@@ -24,12 +24,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $guAdmin = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$guAdmin || $guAdmin['rol'] !== 'administrador') {
-                die("No autorizado");
+                echo json_encode(['success' => false, 'error' => 'No autorizado']);
+                exit;
             }
 
             $conn->beginTransaction();
 
-            // actualizar tarea
             $stmt = $conn->prepare("
                 UPDATE tarea
                 SET titulo = :titulo,
@@ -49,7 +49,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':grupo_id' => $id_grupo
             ]);
 
-            // historial (estadoTarea = 4 → modificada)
             $stmt = $conn->prepare("INSERT INTO historialgrupousuario 
                 (fecha, puntosOtorgados, puntosCanjeados, estadoTarea, grupo_usuario_id, tarea_id_tarea, recompensa_id_recompensa)
                 VALUES (CURDATE(), 0, NULL, 4, :gu_id_admin, :tid, NULL)");
@@ -58,18 +57,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':tid' => $id_tarea
             ]);
 
+            // nombre del asignado
+            $stmt = $conn->prepare("SELECT nombre FROM usuario WHERE id_usuario = :id");
+            $stmt->execute([':id' => $asignadoA]);
+            $nombre_asignado = $stmt->fetchColumn();
+
             $conn->commit();
 
-            header("Location: ../grupo/ver_grupo.php?id=" . $id_grupo . "&section=tareas");
-            exit();
+            echo json_encode([
+                'success' => true,
+                'id_tarea' => $id_tarea,
+                'titulo' => $titulo,
+                'descripcion' => $descripcion,
+                'puntos' => $puntos,
+                'fecha_limite' => $fecha_limite,
+                'asignado' => $nombre_asignado
+            ]);
+            exit;
         } catch (PDOException $e) {
             $conn->rollBack();
-            die("Error al editar tarea: " . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => 'Error al editar tarea: ' . $e->getMessage()]);
+            exit;
         }
     } else {
-        die("Datos incompletos para editar la tarea.");
+        echo json_encode(['success' => false, 'error' => 'Datos incompletos para editar la tarea.']);
+        exit;
     }
 } else {
-    header("Location: ../grupo/ver_grupo.php");
-    exit();
+    echo json_encode(['success' => false, 'error' => 'Método no permitido']);
+    exit;
 }

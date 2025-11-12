@@ -351,11 +351,14 @@ try {
                                     </div>
                                     <div class="task-actions mt-2 mt-md-0">
                                         <button class="btn btn-sm btn-outline-primary admin-only me-1" data-bs-toggle="modal"
-                                            data-bs-target="#editarTareaModal" data-id="<?= $tarea['id_tarea'] ?>"
-                                            data-titulo="<?= htmlspecialchars($tarea['titulo']) ?>"
-                                            data-descripcion="<?= htmlspecialchars($tarea['descripcion']) ?>"
-                                            data-puntos="<?= $tarea['puntos'] ?>" data-fecha="<?= $tarea['fecha_limite'] ?>"
-                                            data-asignado="<?= $tarea['asignado'] ?? '' ?>" title="Modificar">
+                                            data-bs-target="#editarTareaModal" data-id="<?= (int) $tarea['id_tarea'] ?>"
+                                            data-titulo="<?= htmlspecialchars($tarea['titulo'], ENT_QUOTES, 'UTF-8') ?>"
+                                            data-descripcion="<?= htmlspecialchars($tarea['descripcion'], ENT_QUOTES, 'UTF-8') ?>"
+                                            data-puntos="<?= (int) $tarea['puntos'] ?>"
+                                            data-fecha="<?= htmlspecialchars($tarea['fecha_limite'], ENT_QUOTES, 'UTF-8') ?>"
+                                            data-asignado="<?= htmlspecialchars($tarea['asignado'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                            data-asignado-id="<?= isset($tarea['asignado_id']) ? (int) $tarea['asignado_id'] : (isset($tarea['asignadoA']) ? (int) $tarea['asignadoA'] : '') ?>"
+                                            title="Modificar">
                                             <i class="bi bi-pencil-square"></i>
                                         </button>
                                         <button class="btn btn-sm btn-outline-danger admin-only" data-bs-toggle="modal"
@@ -375,6 +378,7 @@ try {
                     </ul>
                 </div>
             </div>
+            
             <!-- Recompensas -->
             <div id="recompensas-section" class="content-section">
                 <div class="content-card p-3">
@@ -384,43 +388,45 @@ try {
                             <i class="bi bi-plus-circle"></i> Crear Recompensa
                         </button>
                     </div>
-                    <!-- Listado de recompensas -->
+
                     <ul id="reward-list" class="list-group mt-4">
-                        <?php foreach ($recompensas as $r): ?>
-                            <li class="list-group-item d-flex justify-content-between align-items-center"
-                                data-id="<?= $r['id_recompensa'] ?>">
-                                <div>
-                                    <strong><?= htmlspecialchars($r['titulo']) ?></strong> - <?= $r['costo'] ?> pts
-                                    <?php if (!empty($r['descripcion'])): ?>
-                                        <br><small class="text-muted"><?= htmlspecialchars($r['descripcion']) ?></small>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="reward-actions">
-                                    <!-- Modificar recompensa -->
-                                    <button class="btn btn-sm btn-outline-primary admin-only me-1" title="Modificar"
-                                        data-bs-toggle="modal" data-bs-target="#modalEditarRecompensa"
-                                        data-id="<?= $r['id_recompensa'] ?>">
-                                        <i class="bi bi-pencil-square"></i>
-                                    </button>
+                        <?php if (!empty($recompensas)): ?>
+                            <?php foreach ($recompensas as $r): ?>
+                                <li class="list-group-item d-flex justify-content-between align-items-center"
+                                    data-id="<?= (int) $r['id_recompensa'] ?>">
+                                    <div>
+                                        <strong><?= htmlspecialchars($r['titulo']) ?></strong> -
+                                        <?= (int) ($r['costo'] ?? $r['costo_puntos']) ?> pts
+                                        <?php if (!empty($r['descripcion'])): ?>
+                                            <br><small class="text-muted"><?= htmlspecialchars($r['descripcion']) ?></small>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="reward-actions">
+                                        <button class="btn btn-sm btn-outline-primary admin-only me-1" title="Modificar"
+                                            data-bs-toggle="modal" data-bs-target="#modalEditarRecompensa"
+                                            data-id="<?= (int) $r['id_recompensa'] ?>"
+                                            data-nombre="<?= htmlspecialchars($r['titulo'] ?? $r['nombre'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                            data-descripcion="<?= htmlspecialchars($r['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                            data-costo="<?= isset($r['costo']) ? (int) $r['costo'] : (isset($r['costo_puntos']) ? (int) $r['costo_puntos'] : 0) ?>">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
 
-
-                                    <!-- Eliminar recompensa -->
-                                    <button type="button"
-                                        class="btn btn-sm btn-outline-danger admin-only btn-confirmar-eliminar"
-                                        data-id="<?= $r['id_recompensa'] ?>"
-                                        data-nombre="<?= htmlspecialchars($r['titulo']) ?>" data-bs-toggle="modal"
-                                        data-bs-target="#modalConfirmarEliminar" title="Eliminar">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-
-                                </div>
+                                        <button type="button"
+                                            class="btn btn-sm btn-outline-danger admin-only btn-confirmar-eliminar"
+                                            data-id="<?= (int) $r['id_recompensa'] ?>"
+                                            data-nombre="<?= htmlspecialchars($r['titulo']) ?>" data-bs-toggle="modal"
+                                            data-bs-target="#modalConfirmarEliminar" title="Eliminar">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <li id="rewards-empty-placeholder" class="list-group-item text-muted">
+                                Todavía no hay recompensas creadas.
                             </li>
-                        <?php endforeach; ?>
+                        <?php endif; ?>
                     </ul>
-
-                    <?php if (empty($recompensas)): ?>
-                        <p class="text-muted mt-3">Todavía no hay recompensas creadas.</p>
-                    <?php endif; ?>
                 </div>
             </div>
 
@@ -717,7 +723,7 @@ try {
     <!-- Modal Crear Tarea -->
     <div class="modal fade" id="crearTareaModal" tabindex="-1" aria-labelledby="crearTareaLabel" aria-hidden="true">
         <div class="modal-dialog">
-            <form action="../tareas/crear_tarea.php" method="POST" class="modal-content">
+            <form id="formCrearTarea" action="../tareas/crear_tarea.php" method="POST" class="modal-content">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title" id="crearTareaLabel">Crear nueva tarea</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
@@ -772,7 +778,7 @@ try {
     <div class="modal fade" id="eliminarTareaModal" tabindex="-1" aria-labelledby="eliminarTareaLabel"
         aria-hidden="true">
         <div class="modal-dialog">
-            <form action="../tareas/eliminar_tarea.php" method="POST" class="modal-content">
+            <form id="formEliminarTarea" action="../tareas/eliminar_tarea.php" method="POST" class="modal-content">
                 <div class="modal-header bg-danger text-white">
                     <h5 class="modal-title" id="eliminarTareaLabel">Eliminar tarea</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
@@ -793,7 +799,7 @@ try {
     <!-- Modal Editar Tarea -->
     <div class="modal fade" id="editarTareaModal" tabindex="-1" aria-labelledby="editarTareaLabel" aria-hidden="true">
         <div class="modal-dialog">
-            <form action="../tareas/editar_tarea.php" method="POST" class="modal-content">
+            <form id="formEditarTarea" action="../tareas/editar_tarea.php" method="POST" class="modal-content">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title" id="editarTareaLabel">Editar tarea</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
@@ -883,11 +889,12 @@ try {
         </div>
     </div>
 
-    <!-- Modal editar recompensa -->
+    <!-- Modal Editar recompensa -->
     <div class="modal fade" id="modalEditarRecompensa" tabindex="-1" aria-labelledby="modalEditarLabel"
         aria-hidden="true">
         <div class="modal-dialog">
-            <form method="POST" action="../recompensas/editar_recompensa.php" class="modal-content">
+            <form id="formEditarRecompensa" method="POST" action="../recompensas/editar_recompensa.php"
+                class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="modalEditarLabel"><i class="bi bi-pencil-square"></i>
                         Editar recompensa</h5>
@@ -944,8 +951,6 @@ try {
             </form>
         </div>
     </div>
-
-
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../../assets/js/group.js"></script>

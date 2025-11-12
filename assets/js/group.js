@@ -4,20 +4,26 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function initGroupPage() {
+    //MIEMBROS
     handleSidebarNavigation();
     manejarSidebarResponsivo();
     configurarModalExpulsion();
+    mostrarToastExpulsion();
+    actualizarMiembrosPeriodicamente();
+    configurarBotonCopiarCodigo();
+
+    //TAREAS
+    crearTareaConModal();
     configurarModalEliminarTarea();
     configurarModalEditarTarea();
+    editarTareaConModal();
+    eliminarTareaConModal();
     configurarBotonCompletarTarea();
-    mostrarToastExpulsion();
-    configurarBotonCopiarCodigo();
-    actualizarMiembrosPeriodicamente();
+
+    //RECOMPENSAS
     editRecompensas();
     initConfirmarEliminarRecompensa();
-    eliminarRecompensa();
     crearRecompensaConModal();
-
 }
 
 // --- Navegación lateral ---
@@ -114,6 +120,152 @@ function configurarModalExpulsion() {
     });
 }
 
+function crearTareaConModal() {
+
+    document.addEventListener("submit", (e) => {
+        const form = e.target;
+        if (!form || form.id !== "formCrearTarea") return;
+
+        e.preventDefault();
+
+        const modal = document.getElementById("crearTareaModal");
+        const formData = new FormData(form);
+
+        fetch(form.action, { method: "POST", body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    alert(data.error || "Error al crear tarea.");
+                    return;
+                }
+
+                // Eliminar mensaje vacío si existe
+                const noTasksMsg = document.querySelector("#task-list .list-group-item");
+                if (noTasksMsg && noTasksMsg.textContent.includes("No hay tareas pendientes")) {
+                    noTasksMsg.remove();
+                }
+
+                // Insertar <li> con los mismos botones que PHP
+                const nuevoLi = document.createElement("li");
+                nuevoLi.className = "list-group-item d-flex justify-content-between align-items-start flex-column flex-md-row";
+                nuevoLi.innerHTML = `
+  <div>
+    <strong>${data.titulo}</strong> - ${data.puntos} pts<br>
+    <small>${data.descripcion}</small><br>
+    <small class="text-muted">Fecha límite: ${data.fecha_limite}</small><br>
+    <small class="text-muted">Asignado a: ${data.asignado || 'Sin asignar'}</small>
+  </div>
+  <div class="task-actions mt-2 mt-md-0">
+    <button class="btn btn-sm btn-outline-primary admin-only me-1" 
+            data-bs-toggle="modal" data-bs-target="#editarTareaModal"
+            data-id="${data.id_tarea}" data-titulo="${data.titulo}"
+            data-descripcion="${data.descripcion}" data-puntos="${data.puntos}"
+            data-fecha="${data.fecha_limite}" data-asignado="${data.asignado}" 
+            title="Modificar">
+      <i class="bi bi-pencil-square"></i>
+    </button>
+    <button class="btn btn-sm btn-outline-danger admin-only" 
+            data-bs-toggle="modal" data-bs-target="#eliminarTareaModal"
+            data-id="${data.id_tarea}" data-titulo="${data.titulo}" 
+            title="Eliminar">
+      <i class="bi bi-trash"></i>
+    </button>
+    <button class="btn btn-sm btn-outline-success complete-task-btn"
+            data-id="${data.id_tarea}" title="Completada">
+      <i class="bi bi-check-circle"></i>
+    </button>
+  </div>
+        `;
+                document.getElementById("task-list").prepend(nuevoLi);
+                asegurarMensajeVacio("task-list", "tasks-empty-placeholder", "No hay tareas pendientes en este grupo.");
+
+                // Cerrar modal y resetear form
+                const bsModal = bootstrap.Modal.getInstance(modal);
+                if (bsModal) bsModal.hide();
+                form.reset();
+
+                // Activar sección Tareas
+                document.querySelectorAll(".sidebar-menu .menu-item").forEach(i => i.classList.remove("active"));
+                document.querySelectorAll(".content-section").forEach(s => s.classList.remove("active"));
+                const tareasItem = document.querySelector('.sidebar-menu .menu-item[data-section="tareas"]');
+                const tareasSection = document.getElementById("tareas-section");
+                if (tareasItem) tareasItem.classList.add("active");
+                if (tareasSection) tareasSection.classList.add("active");
+
+                // Alerta de éxito
+                const alertContainer = document.querySelector(".container.mt-4");
+                if (alertContainer) {
+                    alertContainer.innerHTML = `
+  <div class="alert alert-success alert-dismissible fade show" role="alert">
+    ✅ Tarea creada con éxito.
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+  </div>`;
+                }
+            })
+            .catch(err => console.error("Error:", err));
+    });
+
+}
+
+function eliminarTareaConModal() {
+    const form = document.getElementById("formEliminarTarea");
+    const modal = document.getElementById("eliminarTareaModal");
+    if (!form) return;
+
+    form.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(form);
+        const id = formData.get("id_tarea");
+
+        fetch(form.action, { method: "POST", body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    alert(data.error || "Error al eliminar tarea.");
+                    return;
+                }
+
+                // Encontrar y eliminar el <li>
+                const actionBtn = document.querySelector(`#task-list .task-actions [data-id="${id}"]`);
+                const li = actionBtn ? actionBtn.closest("li") : null;
+                if (li) {
+                    li.style.transition = "opacity 0.25s ease";
+                    li.style.opacity = "0";
+                    setTimeout(() => {
+                        li.remove();
+                        asegurarMensajeVacio("task-list", "tasks-empty-placeholder", "No hay tareas pendientes en este grupo.");
+                    }, 250);
+                }
+
+                // Si la lista queda vacía, mostrar mensaje
+                const list = document.getElementById("task-list");
+                if (list && list.children.length === 0) {
+                    const msg = document.createElement("li");
+                    msg.className = "list-group-item";
+                    msg.textContent = "No hay tareas pendientes en este grupo.";
+                    list.appendChild(msg);
+                }
+
+                // Cerrar modal y resetear
+                const bsModal = bootstrap.Modal.getInstance(modal);
+                if (bsModal) bsModal.hide();
+                form.reset();
+
+                // Alerta
+                const alertContainer = document.querySelector(".container.mt-4");
+                if (alertContainer) {
+                    alertContainer.innerHTML = `
+  <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    🗑️ Tarea eliminada correctamente.
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+  </div>`;
+                }
+            })
+            .catch(err => console.error("Error:", err));
+    });
+}
+
 // --- Modal eliminar tarea ---
 function configurarModalEliminarTarea() {
     const eliminarTareaModal = document.getElementById("eliminarTareaModal");
@@ -126,6 +278,68 @@ function configurarModalEliminarTarea() {
 
         document.getElementById("idTareaEliminar").value = idTarea;
         document.getElementById("tareaTitulo").textContent = titulo;
+    });
+}
+
+function editarTareaConModal() {
+    const form = document.getElementById("formEditarTarea");
+    const modal = document.getElementById("editarTareaModal");
+    if (!form) return;
+
+    form.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(form);
+
+        fetch(form.action, { method: "POST", body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    alert(data.error || "Error al editar tarea.");
+                    return;
+                }
+
+                // Encontrar el <li> de la tarea por cualquier botón con data-id=id_tarea
+                const actionBtn = document.querySelector(`#task-list .task-actions [data-id="${data.id_tarea}"]`);
+                const li = actionBtn ? actionBtn.closest("li") : null;
+                if (!li) return;
+
+                // Actualizar bloque de información
+                const left = li.querySelector("div:first-child");
+                if (left) {
+                    left.innerHTML = `
+  <strong>${data.titulo}</strong> - ${data.puntos} pts<br>
+  <small>${data.descripcion}</small><br>
+  <small class="text-muted">Fecha límite: ${data.fecha_limite}</small><br>
+  <small class="text-muted">Asignado a: ${data.asignado || 'Sin asignar'}</small>
+            `;
+                }
+
+                // Refrescar data-* en los botones de acción
+                li.querySelectorAll(".task-actions [data-id]").forEach(btn => {
+                    btn.setAttribute("data-titulo", data.titulo);
+                    btn.setAttribute("data-descripcion", data.descripcion);
+                    btn.setAttribute("data-puntos", data.puntos);
+                    btn.setAttribute("data-fecha", data.fecha_limite);
+                    btn.setAttribute("data-asignado", data.asignado || '');
+                });
+
+                // Cerrar modal y resetear
+                const bsModal = bootstrap.Modal.getInstance(modal);
+                if (bsModal) bsModal.hide();
+                form.reset();
+
+                // Alerta
+                const alertContainer = document.querySelector(".container.mt-4");
+                if (alertContainer) {
+                    alertContainer.innerHTML = `
+  <div class="alert alert-info alert-dismissible fade show" role="alert">
+    ✏️ Tarea editada con éxito.
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+  </div>`;
+                }
+            })
+            .catch(err => console.error("Error:", err));
     });
 }
 
@@ -143,13 +357,11 @@ function configurarModalEditarTarea() {
         document.getElementById("editPuntos").value = button.getAttribute("data-puntos");
         document.getElementById("editFecha").value = button.getAttribute("data-fecha");
 
-        // Seleccionar el asignado
-        const asignado = button.getAttribute("data-asignado");
+        // Seleccionar el asignado por ID
+        const asignadoId = button.getAttribute("data-asignado-id");
         const select = document.getElementById("editAsignado");
-        if (select) {
-            [...select.options].forEach(opt => {
-                opt.selected = (opt.value === asignado);
-            });
+        if (select && asignadoId) {
+            [...select.options].forEach(opt => { opt.selected = (opt.value === asignadoId); });
         }
     });
 }
@@ -296,8 +508,6 @@ function eliminarRecompensa() {
                 li.style.height = "0";
                 li.style.padding = "0";
                 li.style.margin = "0";
-                setTimeout(() => li.remove(), 400);
-
                 // Cerrar modal
                 const bsModal = bootstrap.Modal.getInstance(modal);
                 bsModal.hide();
@@ -374,8 +584,6 @@ function crearRecompensaConModal() {
   </div>
 `;
 
-
-                    // Agregar al listado
                     document.getElementById("reward-list").prepend(nuevoLi);
                     editRecompensas(); // vuelve a activar el botón de editar
                     initConfirmarEliminarRecompensa(); // vuelve a activar el botón de eliminar
@@ -405,6 +613,27 @@ function crearRecompensaConModal() {
             });
     });
 }
+
+function asegurarMensajeVacio(listId, placeholderId, mensaje) {
+    const lista = document.getElementById(listId);
+    if (!lista) return;
+
+    const placeholder = document.getElementById(placeholderId);
+    const itemsReales = [...lista.children].filter(el => !el.id || el.id !== placeholderId);
+
+    if (itemsReales.length === 0) {
+        if (!placeholder) {
+            const msg = document.createElement("li");
+            msg.className = "list-group-item text-muted";
+            msg.id = placeholderId;
+            msg.textContent = mensaje;
+            lista.appendChild(msg);
+        }
+    } else {
+        if (placeholder) placeholder.remove();
+    }
+}
+
 
 
 
