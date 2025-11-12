@@ -380,7 +380,7 @@ function configurarBotonCompletarTarea() {
                 return;
             }
 
-            fetch("../tareas/completar_tarea.php", {
+            fetch("/../../administrador/tareas/completar_tarea.php", {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: `id_tarea=${encodeURIComponent(idTarea)}&id_grupo=${encodeURIComponent(idGrupo)}`
@@ -491,11 +491,11 @@ function editarRecompensa() {
 
             const formData = new FormData(formEditar);
             try {
-                const resp = await fetch("../recompensas/eliminar_recompensa.php", {
+                const resp = await fetch("../../administrador/recompensas/editar_recompensa.php", {
                     method: "POST",
                     body: formData
                 });
-                const data = await response.json();
+                const data = await resp.json();
 
                 if (data.success) {
                     // actualizar el li en la lista
@@ -593,7 +593,7 @@ function eliminarRecompensa() {
             const formData = new FormData(formEliminar);
 
             try {
-                const resp = await fetch("/Taskify/administrador/recompensas/eliminar_recompensa.php", {
+                const resp = await fetch("../../administrador/recompensas/eliminar_recompensa.php", {
                     method: "POST",
                     body: formData
                 });
@@ -771,7 +771,7 @@ function controlFormCrearRecompensa() {
 
 function mostrarAlerta(texto, tipo = "success") {
 
-    if (!mensaje) return;
+    if (!texto) return;
     const alertContainer = document.querySelector(".dashboard-content");
     if (alertContainer) {
         const wrapper = document.createElement("div");
