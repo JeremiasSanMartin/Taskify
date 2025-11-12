@@ -70,6 +70,40 @@ $stmt = $conn->prepare("
 $stmt->execute([':grupo_id' => $id_grupo]);
 $historial = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Obtener recompensas del grupo
+$recompensas = [];
+
+try {
+    $stmt = $conn->prepare("
+        SELECT id_recompensa, nombre AS titulo, descripcion, costo_puntos AS costo, disponibilidad
+        FROM recompensa
+        WHERE grupo_id = :grupo_id
+        ORDER BY id_recompensa DESC
+    ");
+    $stmt->execute([':grupo_id' => $id_grupo]);
+    $recompensas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $_SESSION['mensaje'] = [
+        'tipo' => 'danger',
+        'texto' => '❌ Error al cargar recompensas: ' . $e->getMessage()
+    ];
+}
+
+// Obtener id_grupo_usuario y puntaje del colaborador
+$stmt = $conn->prepare("
+    SELECT id_grupo_usuario, puntos
+    FROM grupousuario
+    WHERE grupo_id = :gid AND usuario_id = :uid AND estado = 1
+");
+$stmt->execute([':gid' => $id_grupo, ':uid' => $usuario_id]);
+$grupoUsuario = $stmt->fetch(PDO::FETCH_ASSOC);
+
+$id_grupo_usuario = $grupoUsuario['id_grupo_usuario'] ?? null;
+$puntos_actuales = $grupoUsuario['puntos'] ?? 0;
+
+
+
+
 ?>
 
 <!DOCTYPE html>
@@ -208,12 +242,47 @@ $historial = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 
             <!-- Recompensas -->
-            <div id="recompensas-section" class="content-section">
+            <div id="recompensas-section" data-grupo="<?= $id_grupo ?>" class="content-section">
                 <div class="content-card p-3">
                     <h3><i class="bi bi-gift-fill"></i> Recompensas</h3>
-                    <p>Aquí se mostrarán las recompensas disponibles.</p>
+                    <p><strong>Mis puntos:</strong>
+                        <span id="puntos-colaborador" class="badge bg-success fs-5 px-3 py-2 rounded-pill shadow-sm">
+                            <?= $puntos_actuales ?>
+                        </span> pts
+                    </p>
+
+
+
+
+                    <ul id="reward-list" class="list-group mt-3">
+                        <?php if (empty($recompensas)): ?>
+                            <li class="list-group-item text-muted">No hay recompensas disponibles.</li>
+                        <?php else: ?>
+                            <?php foreach ($recompensas as $r): ?>
+                                <li class="list-group-item d-flex justify-content-between align-items-start flex-column flex-md-row"
+                                    data-id="<?= $r['id_recompensa'] ?>">
+                                    <div>
+                                        <strong><?= htmlspecialchars($r['titulo']) ?></strong> - <?= $r['costo'] ?> pts<br>
+                                        <small class="text-muted"><?= htmlspecialchars($r['descripcion']) ?></small><br>
+                                        <?php if ($r['disponibilidad'] > 0): ?>
+                                            <small class="text-muted">Stock: <?= $r['disponibilidad'] ?></small>
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary">Agotado</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-primary mt-2 mt-md-0" title="Canjear"
+                                        data-id="<?= $r['id_recompensa'] ?>" data-grupo="<?= $id_grupo ?>"
+                                        data-nombre="<?= htmlspecialchars($r['titulo']) ?>" <?= $r['disponibilidad'] <= 0 ? 'disabled' : '' ?>>
+                                        <i class="bi bi-cart-check"></i> Canjear
+                                    </button>
+
+                                </li>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </ul>
                 </div>
             </div>
+
 
             <!-- Historial -->
             <div id="historial-section" class="content-section">
@@ -326,9 +395,36 @@ $historial = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 
+    <!-- Modal confirmar canje -->
+    <div class="modal fade" id="modalConfirmCanje" tabindex="-1" aria-labelledby="modalConfirmCanjeLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title" id="modalConfirmCanjeLabel"><i class="bi bi-cart-check"></i> Confirmar canje
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="modalConfirmMensaje" class="mb-0"></p>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btnConfirmarCanje">
+                        <span class="spinner-border spinner-border-sm me-2 d-none" id="spinnerConfirmCanje"></span>
+                        Confirmar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../../assets/js/group.js"></script>
+
 
 </body>
 

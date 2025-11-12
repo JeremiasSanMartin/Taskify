@@ -4,6 +4,9 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function initGroupPage() {
+
+    const grupoIdFromServer = document.getElementById("recompensas-section").dataset.grupo;
+
     //MIEMBROS
     handleSidebarNavigation();
     manejarSidebarResponsivo();
@@ -19,13 +22,16 @@ function initGroupPage() {
     editarTareaConModal();
     eliminarTareaConModal();
     configurarBotonCompletarTarea();
+
+    //RECOMPENSAS
     crearRecompensa();
     controlFormCrearRecompensa();
     prellenarModalEditarRecompensa();
     editarRecompensa();
     eliminarRecompensa();
+    abrirModalConfirmCanje();
+    canjearRecompensa();
     mostrarAlerta();
-
 }
 
 // --- Navegación lateral ---
@@ -436,7 +442,7 @@ function actualizarMiembrosPeriodicamente() {
     if (!grupoId) return;
 
     setInterval(() => {
-        fetch(`miembros_ajax.php?id=${grupoId}`)
+        fetch("../../administrador/grupo/miembros_ajax.php?id=" + grupoId)
             .then(res => res.json())
             .then(data => renderizarMiembros(data))
             .catch(err => console.error("Error al actualizar miembros:", err));
@@ -470,6 +476,8 @@ function renderizarMiembros(miembros) {
 
 function prellenarModalEditarRecompensa() {
     const modalEditar = document.getElementById("modalEditarRecompensa");
+
+    if (!modalEditar) return;
 
     modalEditar.addEventListener("show.bs.modal", (event) => {
         const button = event.relatedTarget;
@@ -752,14 +760,13 @@ function asegurarMensajeVacio(listId, placeholderId, mensaje) {
 }
 
 
-
-
-
-
 function controlFormCrearRecompensa() {
 
     const costoInput = document.getElementById("crear-costo");
     const descripcionInput = document.getElementById("crear-descripcion");
+
+    if (!costoInput) return;
+    if (!descripcionInput) return;
 
     costoInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter") {
@@ -768,6 +775,76 @@ function controlFormCrearRecompensa() {
         }
     });
 }
+
+function canjearRecompensa() {
+    const rewardList = document.getElementById("reward-list");
+    if (!rewardList) return;
+
+    rewardList.addEventListener("click", (e) => {
+        const btn = e.target.closest("button[title='Canjear']");
+        if (!btn) return;
+
+        const idRecompensa = btn.dataset.id;
+        const idGrupo = btn.dataset.grupo;
+        const nombre = btn.dataset.nombre;
+
+        abrirModalConfirmCanje(nombre, async () => {
+            const formData = new FormData();
+            formData.append("id_recompensa", idRecompensa);
+            formData.append("id_grupo", idGrupo);
+
+            try {
+                const resp = await fetch("../../administrador/recompensas/canjear_recompensa.php", {
+                    method: "POST",
+                    body: formData
+                });
+
+                // defensivo: validar JSON
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json();
+
+                if (data.success) {
+                    // Actualizar stock visual
+                    const li = rewardList.querySelector(`li[data-id="${data.id_recompensa}"]`);
+                    if (li) {
+                        li.querySelectorAll("small.text-muted, span.badge, br").forEach(el => el.remove());
+                        if (data.nuevo_stock > 0) {
+                            const stock = document.createElement("small");
+                            stock.classList.add("text-muted");
+                            stock.textContent = "Stock: " + data.nuevo_stock;
+                            li.querySelector("div").appendChild(document.createElement("br"));
+                            li.querySelector("div").appendChild(stock);
+                        } else {
+                            li.classList.add("text-muted", "opacity-75", "bg-light");
+                            const badge = document.createElement("span");
+                            badge.classList.add("badge", "bg-secondary");
+                            badge.textContent = "Agotado";
+                            li.querySelector("div").appendChild(document.createElement("br"));
+                            li.querySelector("div").appendChild(badge);
+                            const btnCanje = li.querySelector("button[title='Canjear']");
+                            if (btnCanje) btnCanje.disabled = true;
+                        }
+                    }
+
+                    // Actualizar puntos en la UI (sin 'pts' extra; mantené el formato que uses)
+                    const puntosSpan = document.getElementById("puntos-colaborador");
+                    if (puntosSpan) puntosSpan.textContent = data.puntos_restantes;
+
+                    // Usar la función de alertas ya existente para mostrar éxito
+                    mostrarAlerta("✅ Recompensa canjeada correctamente", "success");
+                } else {
+                    // Mostrar error con la función de alertas
+                    mostrarAlerta("❌ " + (data.error || "No se pudo canjear la recompensa"), "danger");
+                }
+            } catch (err) {
+                console.error("Error en canjearRecompensa:", err);
+                mostrarAlerta("❌ Error inesperado al canjear", "danger");
+            }
+        });
+    });
+}
+
+
 
 function mostrarAlerta(texto, tipo = "success") {
 
@@ -792,6 +869,44 @@ function mostrarAlerta(texto, tipo = "success") {
         }, 4000);
     }
 }
+
+function abrirModalConfirmCanje(nombreRecompensa, onConfirm) {
+
+    if (!nombreRecompensa) {
+        return;
+    }
+    const modalEl = document.getElementById('modalConfirmCanje');
+    const mensajeEl = document.getElementById('modalConfirmMensaje');
+    const btnConfirm = document.getElementById('btnConfirmarCanje');
+    const spinner = document.getElementById('spinnerConfirmCanje');
+    if (!modalEl || !mensajeEl || !btnConfirm) return;
+
+    mensajeEl.textContent = `¿Seguro que quieres canjear la recompensa "${nombreRecompensa}"?`;
+    const modal = new bootstrap.Modal(modalEl);
+
+    // limpiamos listeners previos
+    const nuevoBtn = btnConfirm.cloneNode(true);
+    btnConfirm.parentNode.replaceChild(nuevoBtn, btnConfirm);
+
+    nuevoBtn.addEventListener('click', async () => {
+        try {
+            nuevoBtn.disabled = true;
+            spinner.classList.remove('d-none');
+            await onConfirm(); // onConfirm debe manejar resultado y actualizar UI
+        } finally {
+            spinner.classList.add('d-none');
+            nuevoBtn.disabled = false;
+            modal.hide();
+        }
+    });
+
+    modal.show();
+}
+
+
+
+
+
 
 
 
