@@ -94,7 +94,7 @@ try {
     if ($rol === 'administrador') {
         header("Location: ver_grupo.php?id=$id_grupo");
     } else {
-        header("Location: ver_grupo.php?id=$id_grupo");
+        header("Location: ../../colaborador/grupo/ver_grupo.php?id=$id_grupo");
     }
     exit;
 } catch (PDOException $e) {

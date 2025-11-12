@@ -351,11 +351,14 @@ try {
                                     </div>
                                     <div class="task-actions mt-2 mt-md-0">
                                         <button class="btn btn-sm btn-outline-primary admin-only me-1" data-bs-toggle="modal"
-                                            data-bs-target="#editarTareaModal" data-id="<?= $tarea['id_tarea'] ?>"
-                                            data-titulo="<?= htmlspecialchars($tarea['titulo']) ?>"
-                                            data-descripcion="<?= htmlspecialchars($tarea['descripcion']) ?>"
-                                            data-puntos="<?= $tarea['puntos'] ?>" data-fecha="<?= $tarea['fecha_limite'] ?>"
-                                            data-asignado="<?= $tarea['asignado'] ?? '' ?>" title="Modificar">
+                                            data-bs-target="#editarTareaModal" data-id="<?= (int) $tarea['id_tarea'] ?>"
+                                            data-titulo="<?= htmlspecialchars($tarea['titulo'], ENT_QUOTES, 'UTF-8') ?>"
+                                            data-descripcion="<?= htmlspecialchars($tarea['descripcion'], ENT_QUOTES, 'UTF-8') ?>"
+                                            data-puntos="<?= (int) $tarea['puntos'] ?>"
+                                            data-fecha="<?= htmlspecialchars($tarea['fecha_limite'], ENT_QUOTES, 'UTF-8') ?>"
+                                            data-asignado="<?= htmlspecialchars($tarea['asignado'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                            data-asignado-id="<?= isset($tarea['asignado_id']) ? (int) $tarea['asignado_id'] : (isset($tarea['asignadoA']) ? (int) $tarea['asignadoA'] : '') ?>"
+                                            title="Modificar">
                                             <i class="bi bi-pencil-square"></i>
                                         </button>
                                         <button class="btn btn-sm btn-outline-danger admin-only" data-bs-toggle="modal"
@@ -375,6 +378,7 @@ try {
                     </ul>
                 </div>
             </div>
+            
             <!-- Recompensas -->
             <div id="recompensas-section" class="content-section">
                 <div class="content-card p-3">
@@ -384,7 +388,7 @@ try {
                             <i class="bi bi-plus-circle"></i> Crear Recompensa
                         </button>
                     </div>
-                    <!-- Listado de recompensas -->
+
                     <ul id="reward-list" class="list-group mt-4">
                         <?php foreach ($recompensas as $r): ?>
                             <?php if ($r['disponibilidad'] == -1)
@@ -427,12 +431,8 @@ try {
                                     </button>
                                 </div>
                             </li>
-                        <?php endforeach; ?>
+                        <?php endif; ?>
                     </ul>
-
-                    <?php if (empty($recompensas)): ?>
-                        <p class="text-muted mt-3">Todavía no hay recompensas creadas.</p>
-                    <?php endif; ?>
                 </div>
             </div>
 
@@ -729,7 +729,7 @@ try {
     <!-- Modal Crear Tarea -->
     <div class="modal fade" id="crearTareaModal" tabindex="-1" aria-labelledby="crearTareaLabel" aria-hidden="true">
         <div class="modal-dialog">
-            <form action="../tareas/crear_tarea.php" method="POST" class="modal-content">
+            <form id="formCrearTarea" action="../tareas/crear_tarea.php" method="POST" class="modal-content">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title" id="crearTareaLabel">Crear nueva tarea</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
@@ -784,7 +784,7 @@ try {
     <div class="modal fade" id="eliminarTareaModal" tabindex="-1" aria-labelledby="eliminarTareaLabel"
         aria-hidden="true">
         <div class="modal-dialog">
-            <form action="../tareas/eliminar_tarea.php" method="POST" class="modal-content">
+            <form id="formEliminarTarea" action="../tareas/eliminar_tarea.php" method="POST" class="modal-content">
                 <div class="modal-header bg-danger text-white">
                     <h5 class="modal-title" id="eliminarTareaLabel">Eliminar tarea</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
@@ -805,7 +805,7 @@ try {
     <!-- Modal Editar Tarea -->
     <div class="modal fade" id="editarTareaModal" tabindex="-1" aria-labelledby="editarTareaLabel" aria-hidden="true">
         <div class="modal-dialog">
-            <form action="../tareas/editar_tarea.php" method="POST" class="modal-content">
+            <form id="formEditarTarea" action="../tareas/editar_tarea.php" method="POST" class="modal-content">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title" id="editarTareaLabel">Editar tarea</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
@@ -976,8 +976,6 @@ try {
             </form>
         </div>
     </div>
-
-
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../../assets/js/group.js"></script>
