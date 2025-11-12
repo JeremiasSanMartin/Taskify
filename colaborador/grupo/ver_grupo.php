@@ -121,7 +121,7 @@ $puntos_actuales = $grupoUsuario['puntos'] ?? 0;
     <link rel="stylesheet" href="../../assets/css/group.css" />
 </head>
 
-<body class="dashboard-body">
+<body class="dashboard-body" data-role="colaborador">
     <!-- Sidebar -->
     <nav class="sidebar" id="main-sidebar">
         <div class="sidebar-header d-flex align-items-center justify-content-between">
@@ -288,63 +288,7 @@ $puntos_actuales = $grupoUsuario['puntos'] ?? 0;
             <div id="historial-section" class="content-section">
                 <div class="content-card p-3">
                     <h3><i class="bi bi-clock-history"></i> Historial del grupo</h3>
-                    <?php if (empty($historial)): ?>
-                        <p class="text-muted">Todavía no hay actividad registrada.</p>
-                    <?php else: ?>
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-striped align-middle">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Usuario</th>
-                                        <th>Acción</th>
-                                        <th>Tarea</th>
-                                        <th>Fecha</th>
-                                        <th>Puntos</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($historial as $h): ?>
-                                        <tr>
-                                            <td><?= htmlspecialchars($h['usuario']) ?></td>
-                                            <td>
-                                                <?php
-                                                switch ($h['estadoTarea']) {
-                                                    case 0:
-                                                        echo "Rechazó la tarea";
-                                                        break;
-                                                    case 1:
-                                                        echo "Marcó como realizada";
-                                                        break;
-                                                    case 2:
-                                                        echo "Aprobó la tarea";
-                                                        break;
-                                                    case 3:
-                                                        echo "Eliminó la tarea";
-                                                        break;
-                                                    case 4:
-                                                        echo "Editó la tarea";
-                                                        break;
-                                                    case 5:
-                                                        echo "Creó la tarea";
-                                                        break;
-                                                    default:
-                                                        echo "Acción desconocida";
-                                                }
-                                                ?>
-                                            </td>
-                                            <td><?= htmlspecialchars($h['tarea'] ?? 'Sin título') ?></td>
-                                            <td><?= date('d/m/Y', strtotime($h['fecha'])) ?></td>
-                                            <td class="text-center">
-                                                <?= ($h['puntosOtorgados'] > 0)
-                                                    ? "<span class='badge bg-success'>{$h['puntosOtorgados']} pts</span>"
-                                                    : "-" ?>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
+                    <div id="historial-list" class="table-responsive"></div>
                 </div>
             </div>
 
