@@ -431,7 +431,7 @@ try {
                                     </button>
                                 </div>
                             </li>
-                        <?php endif; ?>
+                        <?php endforeach; ?>
                     </ul>
                 </div>
             </div>

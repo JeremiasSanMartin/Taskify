@@ -491,7 +491,7 @@ function editarRecompensa() {
 
             const formData = new FormData(formEditar);
             try {
-                const response = await fetch("/Taskify/administrador/recompensas/editar_recompensa.php", {
+                const resp = await fetch("../recompensas/eliminar_recompensa.php", {
                     method: "POST",
                     body: formData
                 });
