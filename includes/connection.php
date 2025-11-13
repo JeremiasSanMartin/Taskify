@@ -26,9 +26,15 @@ $password = $config['password'];
 $database = $config['database'];
 
 try {
-    $conn = new PDO("mysql:host=$host;dbname=$database;charset=utf8mb4", $user, $password);
-    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $conn = new PDO(
+        "mysql:host=$host;dbname=$database;charset=utf8mb4",
+        $user,
+        $password,
+        [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_PERSISTENT => true 
+        ]
+    );
 } catch (PDOException $e) {
     die("Error de conexión: " . $e->getMessage());
 }
-?>
