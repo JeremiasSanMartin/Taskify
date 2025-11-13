@@ -5,7 +5,6 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
-// Verificar sesión
 if (!isset($_SESSION['nombre']) || !isset($_SESSION['email'])) {
     header("Location: ../../index.php");
     exit();
@@ -16,13 +15,12 @@ require_once '../../includes/connection.php';
 $id_grupo = $_GET['id'] ?? null;
 $userEmail = $_SESSION['email'] ?? null;
 
-
 if (!$id_grupo || !$userEmail) {
     echo "<p class='text-danger'>Grupo no especificado o sesión incompleta.</p>";
     exit();
 }
 
-// Obtener el ID del usuario desde el email
+// Obtener ID del usuario
 $stmt = $conn->prepare("SELECT id_usuario FROM usuario WHERE email = :email");
 $stmt->execute([':email' => $userEmail]);
 $usuario_id = $stmt->fetchColumn();
@@ -32,12 +30,18 @@ if (!$usuario_id) {
     exit();
 }
 
-//obtener rol del usuario en este grupo
+// Verificar rol en el grupo
 $stmt = $conn->prepare("SELECT rol FROM grupousuario WHERE grupo_id = :gid AND usuario_id = :uid");
 $stmt->execute([':gid' => $id_grupo, ':uid' => $usuario_id]);
-$rol = $stmt->fetchColumn();
+$rol_usuario = $stmt->fetchColumn();
+$isAdmin = ($rol_usuario === 'administrador');
 
-// Obtener datos del grupo
+if (!$isAdmin) {
+    echo "<p class='text-danger'>Acceso restringido a administradores.</p>";
+    exit();
+}
+
+// Datos básicos del grupo
 $stmt = $conn->prepare("SELECT nombre, tipo, codigo_invitacion, descripcion FROM grupo WHERE id_grupo = :id");
 $stmt->execute([':id' => $id_grupo]);
 $grupo = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -47,115 +51,13 @@ if (!$grupo) {
     exit();
 }
 
-// Obtener cantidad de miembros
+// Cantidad de miembros
 $stmt = $conn->prepare("SELECT COUNT(*) FROM grupousuario WHERE grupo_id = :id AND estado = 1");
 $stmt->execute([':id' => $id_grupo]);
 $total_miembros = $stmt->fetchColumn();
 
-// Obtenemos los datos reales de los miembros
-$stmt = $conn->prepare("
-    SELECT u.id_usuario, u.nombre, gu.rol
-    FROM grupousuario gu
-    JOIN usuario u ON gu.usuario_id = u.id_usuario
-    WHERE gu.grupo_id = :id AND gu.estado = 1
-");
-$stmt->execute([':id' => $id_grupo]);
-$miembros = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-//Verificamos si el usuario actual es admin
-$stmt = $conn->prepare("
-    SELECT rol FROM grupousuario
-    WHERE grupo_id = :id AND usuario_id = :uid
-");
-$stmt->execute([':id' => $id_grupo, ':uid' => $usuario_id]);
-$rol_usuario = $stmt->fetchColumn();
-$isAdmin = ($rol_usuario === 'administrador');
-
-//obtener tareas
 $userName = htmlspecialchars($_SESSION['nombre']);
-
-$tareas = [];
-
-if ($id_grupo) {
-    try {
-        $stmt = $conn->prepare("
-        SELECT t.id_tarea, t.titulo, t.descripcion, t.puntos, t.fecha_limite,
-               u.nombre AS asignado
-        FROM tarea t
-        LEFT JOIN usuario u ON t.asignadoA = u.id_usuario
-        WHERE t.grupo_id = :grupo_id AND t.estado = 'pendiente'
-        ORDER BY t.fecha_limite ASC
-        ");
-        $stmt->bindParam(':grupo_id', $id_grupo, PDO::PARAM_INT);
-        $stmt->execute();
-        $tareas = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOException $e) {
-        echo "<p>Error al obtener tareas: " . $e->getMessage() . "</p>";
-    }
-}
-
-//tareas realizadas
-$tareas_realizadas = [];
-
-if ($id_grupo) {
-    try {
-        $stmt = $conn->prepare("
-        SELECT t.id_tarea, t.titulo, t.descripcion, t.puntos, 
-                t.fecha_limite, t.fecha_entrega, 
-                u.nombre AS asignado
-        FROM tarea t
-        LEFT JOIN usuario u ON t.asignadoA = u.id_usuario
-        WHERE t.grupo_id = :grupo_id AND t.estado = 'realizada'
-        ORDER BY t.fecha_entrega DESC, t.fecha_limite ASC
-        ");
-        $stmt->bindParam(':grupo_id', $id_grupo, PDO::PARAM_INT);
-        $stmt->execute();
-        $tareas_realizadas = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOException $e) {
-        echo "<p class='text-danger'>Error al obtener tareas realizadas: " . htmlspecialchars($e->getMessage()) . "</p>";
-    }
-}
-
-//ver historial
-$stmt = $conn->prepare("
-    SELECT 
-        h.id_historialGrupoUsuario,
-        h.fecha,
-        h.puntosOtorgados,
-        h.puntosCanjeados,
-        h.estadoTarea,
-        u.nombre AS usuario,
-        t.titulo AS tarea,
-        r.nombre AS recompensa
-    FROM historialgrupousuario h
-    LEFT JOIN grupousuario gu ON h.grupo_usuario_id = gu.id_grupo_usuario
-    LEFT JOIN usuario u ON gu.usuario_id = u.id_usuario
-    LEFT JOIN tarea t ON h.tarea_id_tarea = t.id_tarea
-    LEFT JOIN recompensa r ON h.recompensa_id_recompensa = r.id_recompensa
-    WHERE gu.grupo_id = :grupo_id
-    ORDER BY h.fecha DESC, h.id_historialGrupoUsuario DESC
-");
-$stmt->execute([':grupo_id' => $id_grupo]);
-$historial = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-//obtener recompensas 
-$recompensas = [];
-
-try {
-    $stmt = $conn->prepare("
-        SELECT id_recompensa, nombre AS titulo, descripcion, costo_puntos AS costo, disponibilidad
-        FROM recompensa
-        WHERE grupo_id = :grupo_id
-        ORDER BY id_recompensa DESC
-    ");
-    $stmt->execute([':grupo_id' => $id_grupo]);
-    $recompensas = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    $_SESSION['mensaje'] = [
-        'tipo' => 'danger',
-        'texto' => '❌ Error al cargar recompensas: ' . $e->getMessage()
-    ];
-}
+$userEmail = htmlspecialchars($_SESSION['email']);
 
 ?>
 
@@ -183,7 +85,7 @@ try {
     <link rel="stylesheet" href="../../assets/css/group.css">
 </head>
 
-<body class="dashboard-body">
+<body class="dashboard-body" data-role="admin">
 
 
     <!-- Sidebar -->
@@ -289,6 +191,9 @@ try {
                 <button class="btn btn-danger btn-lg px-4" data-bs-toggle="modal" data-bs-target="#eliminarGrupoModal">
                     <i class="bi bi-trash me-1"></i> Eliminar
                 </button>
+                <button id="btn-recargar" class="btn btn-primary btn-lg">
+                    <i class="bi bi-arrow-clockwise"></i> Recargar datos
+                </button>
             </div>
         </header>
 
@@ -299,24 +204,6 @@ try {
                 <div class="content-card p-3">
                     <h3><i class="bi bi-people"></i> Miembros</h3>
                     <ul id="member-list" class="list-group">
-                        <?php if (empty($miembros)): ?>
-                            <li class="list-group-item text-muted">Este grupo aún no tiene miembros.</li>
-                        <?php else: ?>
-                            <?php foreach ($miembros as $miembro): ?>
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <?php echo htmlspecialchars($miembro['nombre']); ?>
-                                    <?php echo $miembro['rol'] === 'administrador' ? '(Admin)' : ''; ?>
-                                    <?php if ($isAdmin && $miembro['rol'] !== 'administrador'): ?>
-                                        <button class="btn btn-sm btn-outline-danger remove-member-btn admin-only"
-                                            data-bs-toggle="modal" data-bs-target="#expulsarModal"
-                                            data-nombre="<?php echo htmlspecialchars($miembro['nombre']); ?>"
-                                            data-id="<?php echo $miembro['id_usuario']; ?>">
-                                            <i class="bi bi-person-x"></i>
-                                        </button>
-                                    <?php endif; ?>
-                                </li>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
                     </ul>
                 </div>
             </div>
@@ -332,53 +219,10 @@ try {
                         </button>
                     </div>
                     <ul id="task-list" class="list-group mt-3">
-                        <?php if (empty($tareas)): ?>
-                            <li class="list-group-item">No hay tareas pendientes en este grupo.</li>
-                        <?php else: ?>
-                            <?php foreach ($tareas as $tarea): ?>
-                                <li
-                                    class="list-group-item d-flex justify-content-between align-items-start flex-column flex-md-row">
-                                    <div>
-                                        <strong><?= htmlspecialchars($tarea['titulo']) ?></strong> -
-                                        <?= htmlspecialchars($tarea['puntos']) ?> pts<br>
-                                        <small><?= htmlspecialchars($tarea['descripcion']) ?></small><br>
-                                        <small class="text-muted">Fecha límite:
-                                            <?= date('d/m/Y', strtotime($tarea['fecha_limite'])) ?>
-                                        </small><br>
-                                        <small class="text-muted">
-                                            Asignado a: <?= htmlspecialchars($tarea['asignado'] ?? 'Sin asignar') ?>
-                                        </small>
-                                    </div>
-                                    <div class="task-actions mt-2 mt-md-0">
-                                        <button class="btn btn-sm btn-outline-primary admin-only me-1" data-bs-toggle="modal"
-                                            data-bs-target="#editarTareaModal" data-id="<?= (int) $tarea['id_tarea'] ?>"
-                                            data-titulo="<?= htmlspecialchars($tarea['titulo'], ENT_QUOTES, 'UTF-8') ?>"
-                                            data-descripcion="<?= htmlspecialchars($tarea['descripcion'], ENT_QUOTES, 'UTF-8') ?>"
-                                            data-puntos="<?= (int) $tarea['puntos'] ?>"
-                                            data-fecha="<?= htmlspecialchars($tarea['fecha_limite'], ENT_QUOTES, 'UTF-8') ?>"
-                                            data-asignado="<?= htmlspecialchars($tarea['asignado'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-                                            data-asignado-id="<?= isset($tarea['asignado_id']) ? (int) $tarea['asignado_id'] : (isset($tarea['asignadoA']) ? (int) $tarea['asignadoA'] : '') ?>"
-                                            title="Modificar">
-                                            <i class="bi bi-pencil-square"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger admin-only" data-bs-toggle="modal"
-                                            data-bs-target="#eliminarTareaModal" data-id="<?= $tarea['id_tarea'] ?>"
-                                            data-titulo="<?= htmlspecialchars($tarea['titulo']) ?>" title="Eliminar">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-success complete-task-btn"
-                                            data-id="<?= $tarea['id_tarea'] ?>" title="Completada">
-                                            <i class="bi bi-check-circle"></i>
-                                        </button>
-
-                                    </div>
-                                </li>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
                     </ul>
                 </div>
             </div>
-            
+
             <!-- Recompensas -->
             <div id="recompensas-section" class="content-section">
                 <div class="content-card p-3">
@@ -390,48 +234,6 @@ try {
                     </div>
 
                     <ul id="reward-list" class="list-group mt-4">
-                        <?php foreach ($recompensas as $r): ?>
-                            <?php if ($r['disponibilidad'] == -1)
-                                continue; // ocultar eliminadas ?>
-
-                            <li class="list-group-item d-flex justify-content-between align-items-center <?= $r['disponibilidad'] == 0 ? 'text-muted bg-light' : '' ?>"
-                                data-id="<?= $r['id_recompensa'] ?>">
-                                <div>
-                                    <strong><?= htmlspecialchars($r['titulo']) ?></strong> -
-                                    <span class="points"><?= $r['costo'] ?> pts</span>
-
-                                    <?php if (!empty($r['descripcion'])): ?>
-                                        <br><small class="text-muted"><?= htmlspecialchars($r['descripcion']) ?></small>
-                                    <?php endif; ?>
-
-                                    <?php if ($r['disponibilidad'] > 0): ?>
-                                        <br><small class="text-muted">Stock: <?= $r['disponibilidad'] ?></small>
-                                    <?php else: ?>
-                                        <br><span class="badge bg-secondary">No disponible</span>
-                                    <?php endif; ?>
-                                </div>
-
-                                <div class="reward-actions">
-                                    <!-- Modificar recompensa (siempre activo) -->
-                                    <button class="btn btn-sm btn-outline-primary admin-only me-1" title="Modificar"
-                                        data-bs-toggle="modal" data-bs-target="#modalEditarRecompensa"
-                                        data-id="<?= $r['id_recompensa'] ?>"
-                                        data-nombre="<?= htmlspecialchars($r['titulo']) ?>" data-costo="<?= $r['costo'] ?>"
-                                        data-descripcion="<?= htmlspecialchars($r['descripcion'] ?? '') ?>"
-                                        data-disponibilidad="<?= $r['disponibilidad'] ?>">
-                                        <i class="bi bi-pencil-square"></i>
-                                    </button>
-
-                                    <!-- Eliminar recompensa (solo si está activa) -->
-                                    <button class="btn btn-sm btn-outline-danger admin-only" title="Eliminar"
-                                        data-id="<?= $r['id_recompensa'] ?>"
-                                        data-nombre="<?= htmlspecialchars($r['titulo']) ?>" data-bs-toggle="modal"
-                                        data-bs-target="#modalEliminarRecompensa" <?= $r['disponibilidad'] == 0 ? 'disabled' : '' ?>>
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </div>
-                            </li>
-                        <?php endforeach; ?>
                     </ul>
                 </div>
             </div>
@@ -440,80 +242,7 @@ try {
             <div id="historial-section" class="content-section">
                 <div class="content-card p-3">
                     <h3><i class="bi bi-clock-history"></i> Historial del grupo</h3>
-                    <?php if (empty($historial)): ?>
-                        <p class="text-muted">Todavía no hay actividad registrada.</p>
-                    <?php else: ?>
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-striped align-middle">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Usuario</th>
-                                        <th>Acción</th>
-                                        <th>Tarea</th>
-                                        <th>Fecha</th>
-                                        <th>Puntos</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($historial as $h): ?>
-                                        <tr>
-                                            <td><?= htmlspecialchars($h['usuario']) ?></td>
-                                            <td>
-                                                <?php
-                                                switch ($h['estadoTarea']) {
-                                                    case 0:
-                                                        echo "Rechazó la tarea";
-                                                        break;
-                                                    case 1:
-                                                        echo "Marcó como realizada";
-                                                        break;
-                                                    case 2:
-                                                        echo "Aprobó la tarea";
-                                                        break;
-                                                    case 3:
-                                                        echo "Eliminó la tarea";
-                                                        break;
-                                                    case 4:
-                                                        echo "Editó la tarea";
-                                                        break;
-                                                    case 5:
-                                                        echo "Creó la tarea";
-                                                        break;
-                                                    case 10:
-                                                        echo "Creó la recompensa";
-                                                        break;
-                                                    case 11:
-                                                        echo "Editó la recompensa";
-                                                        break;
-                                                    case 12:
-                                                        echo "Eliminó la recompensa";
-                                                        break;
-                                                    default:
-                                                        echo "Acción desconocida";
-                                                }
-                                                ?>
-                                            </td>
-                                            <td><?php
-                                            if (!empty($h['recompensa'])) {
-                                                echo htmlspecialchars($h['recompensa']);
-                                            } elseif (!empty($h['tarea'])) {
-                                                echo htmlspecialchars($h['tarea']);
-                                            } else {
-                                                echo 'Sin título';
-                                            }
-                                            ?></td>
-                                            <td><?= date('d/m/Y', strtotime($h['fecha'])) ?></td>
-                                            <td class="text-center">
-                                                <?= ($h['puntosOtorgados'] > 0)
-                                                    ? "<span class='badge bg-success'>{$h['puntosOtorgados']} pts</span>"
-                                                    : "-" ?>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
+                    <div id="historial-list" class="table-responsive"></div>
                 </div>
             </div>
 
@@ -523,61 +252,9 @@ try {
                 <div class="content-card p-3">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h3><i class="bi bi-check2-square"></i> Aprobar Tareas</h3>
-                        <span class="text-muted">
-                            <?php if (!empty($tareas_realizadas)): ?>
-                                <?= count($tareas_realizadas) ?> pendientes de aprobación
-                            <?php else: ?>
-                                Sin tareas para aprobar
-                            <?php endif; ?>
-                        </span>
                     </div>
 
                     <ul id="approve-task-list" class="list-group mt-3">
-                        <?php if (empty($tareas_realizadas)): ?>
-                            <li class="list-group-item text-muted">No hay tareas marcadas como realizadas.</li>
-                        <?php else: ?>
-                            <?php foreach ($tareas_realizadas as $t): ?>
-                                <li
-                                    class="list-group-item d-flex justify-content-between align-items-start flex-column flex-md-row">
-                                    <div>
-                                        <strong><?= htmlspecialchars($t['titulo']) ?></strong> -
-                                        <?= htmlspecialchars($t['puntos']) ?> pts<br>
-                                        <small><?= htmlspecialchars($t['descripcion']) ?></small><br>
-                                        <small class="text-muted">
-                                            Asignado a: <?= htmlspecialchars($t['asignado'] ?? 'Desconocido') ?>
-                                        </small><br>
-                                        <?php if (!empty($t['fecha_entrega'])): ?>
-                                            <small class="text-muted">Entregada:
-                                                <?= date('d/m/Y', strtotime($t['fecha_entrega'])) ?></small>
-                                        <?php else: ?>
-                                            <small class="text-muted">Fecha límite:
-                                                <?= date('d/m/Y', strtotime($t['fecha_limite'])) ?></small>
-                                        <?php endif; ?>
-                                    </div>
-                                    <div class="task-actions mt-2 mt-md-0">
-                                        <div class="task-actions mt-2 mt-md-0">
-                                            <!-- Botón Aprobar -->
-                                            <form action="../tareas/aprobar_tarea.php" method="POST" class="d-inline">
-                                                <input type="hidden" name="id_tarea" value="<?= $t['id_tarea'] ?>">
-                                                <input type="hidden" name="id_grupo" value="<?= $id_grupo ?>">
-                                                <button type="submit" class="btn btn-sm btn-outline-success" title="Aprobar">
-                                                    <i class="bi bi-check-circle"></i>
-                                                </button>
-                                            </form>
-
-                                            <!-- Botón Rechazar -->
-                                            <form action="../tareas/rechazar_tarea.php" method="POST" class="d-inline ms-2">
-                                                <input type="hidden" name="id_tarea" value="<?= $t['id_tarea'] ?>">
-                                                <input type="hidden" name="id_grupo" value="<?= $id_grupo ?>">
-                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Rechazar">
-                                                    <i class="bi bi-x-circle"></i>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </li>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
                     </ul>
                 </div>
             </div>

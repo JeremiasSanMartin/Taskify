@@ -5,14 +5,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function initGroupPage() {
 
-    const grupoIdFromServer = document.getElementById("recompensas-section").dataset.grupo;
+    refrescarTodoConBoton();
 
     //MIEMBROS
     handleSidebarNavigation();
     manejarSidebarResponsivo();
     configurarModalExpulsion();
     mostrarToastExpulsion();
-    actualizarMiembrosPeriodicamente();
     configurarBotonCopiarCodigo();
 
     //TAREAS
@@ -22,6 +21,7 @@ function initGroupPage() {
     editarTareaConModal();
     eliminarTareaConModal();
     configurarBotonCompletarTarea();
+    configurarBotonesAprobarRechazar()
 
     //RECOMPENSAS
     crearRecompensa();
@@ -376,28 +376,77 @@ function configurarModalEditarTarea() {
 
 //completar tarea
 function configurarBotonCompletarTarea() {
-    document.querySelectorAll(".complete-task-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const idTarea = btn.getAttribute("data-id");
-            const idGrupo = new URLSearchParams(window.location.search).get("id");
+    const taskList = document.getElementById("task-list");
+    if (!taskList) return;
 
-            if (!idTarea || !idGrupo) {
-                console.error("Faltan datos para completar tarea");
-                return;
+    taskList.addEventListener("click", (e) => {
+        const btn = e.target.closest(".complete-task-btn");
+        if (!btn) return;
+
+        const idTarea = btn.dataset.id;
+        const idGrupo = new URLSearchParams(window.location.search).get("id");
+
+        if (!idTarea || !idGrupo) {
+            console.error("Faltan datos para completar tarea");
+            return;
+        }
+
+        fetch("../../administrador/tareas/completar_tarea.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: `id_tarea=${encodeURIComponent(idTarea)}&id_grupo=${encodeURIComponent(idGrupo)}`
+        })
+        .then(res => res.json())
+        .then(data => {
+            console.log("Respuesta completar_tarea:", data);
+            if (data.success) {
+                // refrescar lista sin recargar toda la página
+                refrescarTodoConBoton();
+            } else {
+                alert(data.error || "Error al completar tarea");
             }
+        })
+        .catch(err => console.error("Error al completar tarea:", err));
+    });
+}
+function configurarBotonesAprobarRechazar() {
+    const lista = document.getElementById("approve-task-list");
+    if (!lista) return;
 
-            fetch("/../../administrador/tareas/completar_tarea.php", {
+    lista.addEventListener("click", (e) => {
+        const approveBtn = e.target.closest(".approve-task-btn");
+        const rejectBtn = e.target.closest(".reject-task-btn");
+        const idGrupo = new URLSearchParams(window.location.search).get("id");
+
+        if (approveBtn) {
+            const idTarea = approveBtn.dataset.id;
+            fetch("../tareas/aprobar_tarea.php", {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: `id_tarea=${encodeURIComponent(idTarea)}&id_grupo=${encodeURIComponent(idGrupo)}`
             })
-                .then(res => res.text())
-                .then(data => {
-                    console.log("Respuesta completar_tarea:", data);
-                    window.location.href = `ver_grupo.php?id=${idGrupo}&section=tareas`;
-                })
-                .catch(err => console.error("Error al completar tarea:", err));
-        });
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) refrescarTodoConBoton();
+                else alert(data.error || "Error al aprobar tarea");
+            })
+            .catch(err => console.error("Error al aprobar tarea:", err));
+        }
+
+        if (rejectBtn) {
+            const idTarea = rejectBtn.dataset.id;
+            fetch("../tareas/rechazar_tarea.php", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: `id_tarea=${encodeURIComponent(idTarea)}&id_grupo=${encodeURIComponent(idGrupo)}`
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) refrescarTodoConBoton();
+                else alert(data.error || "Error al rechazar tarea");
+            })
+            .catch(err => console.error("Error al rechazar tarea:", err));
+        }
     });
 }
 
@@ -436,31 +485,17 @@ function configurarBotonCopiarCodigo() {
     });
 }
 
-function actualizarMiembrosPeriodicamente() {
-    console.log("Actualizando miembros...");
-    const grupoId = obtenerGrupoIdDesdeURL(); // extraé el ID del grupo desde la URL
-    if (!grupoId) return;
-
-    setInterval(() => {
-        fetch("../../administrador/grupo/miembros_ajax.php?id=" + grupoId)
-            .then(res => res.json())
-            .then(data => renderizarMiembros(data))
-            .catch(err => console.error("Error al actualizar miembros:", err));
-    }, 5000); // cada 5 segundos
-}
-
 function obtenerGrupoIdDesdeURL() {
     const params = new URLSearchParams(window.location.search);
     return params.get("id");
 }
 
-function renderizarMiembros(miembros) {
-    console.log("Miembros recibidos:", miembros);
+function renderizarMiembros(miembros, isAdmin) {
     const lista = document.getElementById("member-list");
     if (!lista) return;
 
     lista.innerHTML = "";
-    if (miembros.length === 0) {
+    if (!miembros || miembros.length === 0) {
         lista.innerHTML = "<li class='list-group-item text-muted'>Este grupo aún no tiene miembros.</li>";
         return;
     }
@@ -468,7 +503,228 @@ function renderizarMiembros(miembros) {
     miembros.forEach(m => {
         const li = document.createElement("li");
         li.className = "list-group-item d-flex justify-content-between align-items-center";
-        li.textContent = m.nombre + (m.rol === "administrador" ? " (Admin)" : "");
+
+        const nombreSpan = document.createElement("span");
+        nombreSpan.textContent = m.nombre + (m.rol === "administrador" ? " (Admin)" : "");
+        li.appendChild(nombreSpan);
+
+        if (isAdmin && m.rol !== "administrador") {
+            const btn = document.createElement("button");
+            btn.className = "btn btn-sm btn-outline-danger remove-member-btn admin-only";
+            btn.setAttribute("data-bs-toggle", "modal");
+            btn.setAttribute("data-bs-target", "#expulsarModal");
+            btn.setAttribute("data-nombre", m.nombre);
+            btn.setAttribute("data-id", m.id_usuario);
+            btn.innerHTML = '<i class="bi bi-person-x"></i>';
+            li.appendChild(btn);
+        }
+
+        lista.appendChild(li);
+    });
+}
+function renderizarTareas(tareas, isAdmin) {
+    const lista = document.getElementById("task-list");
+    if (!lista) return;
+
+    lista.innerHTML = "";
+    if (!tareas || tareas.length === 0) {
+        lista.innerHTML = "<li class='list-group-item text-muted'>No hay tareas pendientes en este grupo.</li>";
+        return;
+    }
+
+    tareas.forEach(t => {
+        const li = document.createElement("li");
+        li.className = "list-group-item d-flex justify-content-between align-items-start flex-column flex-md-row";
+
+        let acciones = `
+            <button class="btn btn-sm btn-outline-success complete-task-btn" data-id="${t.id_tarea}" title="Completada">
+                <i class="bi bi-check-circle"></i>
+            </button>
+        `;
+
+        if (isAdmin) {
+            acciones = `
+                <button class="btn btn-sm btn-outline-primary admin-only me-1"
+                    data-bs-toggle="modal" data-bs-target="#editarTareaModal"
+                    data-id="${t.id_tarea}" data-titulo="${t.titulo}"
+                    data-descripcion="${t.descripcion}" data-puntos="${t.puntos}"
+                    data-fecha="${t.fecha_limite}" data-asignado="${t.asignado || ''}"
+                    title="Modificar">
+                    <i class="bi bi-pencil-square"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger admin-only"
+                    data-bs-toggle="modal" data-bs-target="#eliminarTareaModal"
+                    data-id="${t.id_tarea}" data-titulo="${t.titulo}" title="Eliminar">
+                    <i class="bi bi-trash"></i>
+                </button>
+                ${acciones}
+            `;
+        }
+
+        li.innerHTML = `
+            <div>
+                <strong>${t.titulo}</strong> - ${t.puntos} pts<br>
+                <small>${t.descripcion}</small><br>
+                <small class="text-muted">Fecha límite: ${t.fecha_limite}</small><br>
+                <small class="text-muted">Asignado a: ${t.asignado || 'Sin asignar'}</small>
+            </div>
+            <div class="task-actions mt-2 mt-md-0">
+                ${acciones}
+            </div>
+        `;
+        lista.appendChild(li);
+    });
+}
+
+function renderizarRecompensas(recompensas, isAdmin) {
+    const lista = document.getElementById("reward-list");
+    if (!lista) return;
+
+    lista.innerHTML = "";
+    if (!recompensas || recompensas.length === 0) {
+        lista.innerHTML = "<li class='list-group-item text-muted'>No hay recompensas disponibles.</li>";
+        return;
+    }
+
+    recompensas.forEach(r => {
+        if (r.disponibilidad == -1) return; // ocultar eliminadas
+
+        const li = document.createElement("li");
+        li.className = `list-group-item d-flex justify-content-between align-items-start flex-column flex-md-row ${r.disponibilidad == 0 ? 'text-muted bg-light' : ''}`;
+        li.dataset.id = r.id_recompensa;
+
+        // Bloque de acciones según rol
+        let acciones = "";
+        if (isAdmin) {
+            acciones = `
+                <button class="btn btn-sm btn-outline-primary admin-only me-1" title="Modificar"
+                    data-bs-toggle="modal" data-bs-target="#modalEditarRecompensa"
+                    data-id="${r.id_recompensa}" data-nombre="${r.titulo}"
+                    data-costo="${r.costo}" data-descripcion="${r.descripcion || ''}"
+                    data-disponibilidad="${r.disponibilidad}">
+                    <i class="bi bi-pencil-square"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger admin-only" title="Eliminar"
+                    data-id="${r.id_recompensa}" data-nombre="${r.titulo}"
+                    data-bs-toggle="modal" data-bs-target="#modalEliminarRecompensa"
+                    ${r.disponibilidad == 0 ? 'disabled' : ''}>
+                    <i class="bi bi-trash"></i>
+                </button>
+            `;
+        } else {
+            acciones = `
+                <button class="btn btn-sm btn-outline-primary mt-2 mt-md-0" title="Canjear"
+                    data-id="${r.id_recompensa}" data-nombre="${r.titulo}"
+                    ${r.disponibilidad <= 0 ? 'disabled' : ''}>
+                    <i class="bi bi-cart-check"></i> Canjear
+                </button>
+            `;
+        }
+
+        li.innerHTML = `
+            <div>
+                <strong>${r.titulo}</strong> - ${r.costo} pts<br>
+                ${r.descripcion ? `<small class="text-muted">${r.descripcion}</small><br>` : ""}
+                ${r.disponibilidad > 0
+                ? `<small class="text-muted">Stock: ${r.disponibilidad}</small>`
+                : `<span class="badge bg-secondary">No disponible</span>`}
+            </div>
+            <div class="reward-actions">
+                ${acciones}
+            </div>
+        `;
+        lista.appendChild(li);
+    });
+}
+
+function renderizarHistorial(historial) {
+    const contenedor = document.getElementById("historial-list");
+    if (!contenedor) return;
+
+    if (!historial || historial.length === 0) {
+        contenedor.innerHTML = "<p class='text-muted'>Todavía no hay actividad registrada.</p>";
+        return;
+    }
+
+    let html = `
+        <table class="table table-bordered table-striped align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Usuario</th>
+                    <th>Acción</th>
+                    <th>Tarea/Recompensa</th>
+                    <th>Fecha</th>
+                    <th>Puntos</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    historial.forEach(h => {
+        let accion;
+        switch (parseInt(h.estadoTarea)) {
+            case 0: accion = "Rechazó la tarea"; break;
+            case 1: accion = "Marcó como realizada"; break;
+            case 2: accion = "Aprobó la tarea"; break;
+            case 3: accion = "Eliminó la tarea"; break;
+            case 4: accion = "Editó la tarea"; break;
+            case 5: accion = "Creó la tarea"; break;
+            case 10: accion = "Creó la recompensa"; break;
+            case 11: accion = "Editó la recompensa"; break;
+            case 12: accion = "Eliminó la recompensa"; break;
+            default: accion = "Acción desconocida";
+        }
+
+        const titulo = h.recompensa || h.tarea || 'Sin título';
+        const puntos = h.puntosOtorgados > 0
+            ? `<span class="badge bg-success">${h.puntosOtorgados} pts</span>`
+            : "-";
+
+        html += `
+            <tr>
+                <td>${h.usuario}</td>
+                <td>${accion}</td>
+                <td>${titulo}</td>
+                <td>${h.fecha}</td>
+                <td class="text-center">${puntos}</td>
+            </tr>
+        `;
+    });
+
+    html += "</tbody></table>";
+    contenedor.innerHTML = html;
+}
+function renderizarAprobarTareas(tareas_realizadas) {
+    const lista = document.getElementById("approve-task-list");
+    if (!lista) return;
+
+    lista.innerHTML = "";
+    if (!tareas_realizadas || tareas_realizadas.length === 0) {
+        lista.innerHTML = "<li class='list-group-item text-muted'>No hay tareas marcadas como realizadas.</li>";
+        return;
+    }
+
+    tareas_realizadas.forEach(t => {
+        const li = document.createElement("li");
+        li.className = "list-group-item d-flex justify-content-between align-items-start flex-column flex-md-row";
+        li.innerHTML = `
+            <div>
+                <strong>${t.titulo}</strong> - ${t.puntos} pts<br>
+                <small>${t.descripcion}</small><br>
+                <small class="text-muted">Asignado a: ${t.asignado || 'Desconocido'}</small><br>
+                ${t.fecha_entrega
+                ? `<small class="text-muted">Entregada: ${t.fecha_entrega}</small>`
+                : `<small class="text-muted">Fecha límite: ${t.fecha_limite}</small>`}
+            </div>
+            <div class="task-actions mt-2 mt-md-0">
+                <button class="btn btn-sm btn-outline-success approve-task-btn" data-id="${t.id_tarea}" title="Aprobar">
+                    <i class="bi bi-check-circle"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger reject-task-btn ms-2" data-id="${t.id_tarea}" title="Rechazar">
+                    <i class="bi bi-x-circle"></i>
+                </button>
+            </div>
+        `;
         lista.appendChild(li);
     });
 }
@@ -777,6 +1033,7 @@ function controlFormCrearRecompensa() {
 }
 
 function canjearRecompensa() {
+    const grupoIdFromServer = document.getElementById("recompensas-section").dataset.grupo;
     const rewardList = document.getElementById("reward-list");
     if (!rewardList) return;
 
@@ -785,8 +1042,10 @@ function canjearRecompensa() {
         if (!btn) return;
 
         const idRecompensa = btn.dataset.id;
-        const idGrupo = btn.dataset.grupo;
         const nombre = btn.dataset.nombre;
+
+        // usar el grupo global si el botón no lo trae
+        const idGrupo = btn.dataset.grupo || grupoIdFromServer;
 
         abrirModalConfirmCanje(nombre, async () => {
             const formData = new FormData();
@@ -798,42 +1057,12 @@ function canjearRecompensa() {
                     method: "POST",
                     body: formData
                 });
-
-                // defensivo: validar JSON
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                 const data = await resp.json();
 
                 if (data.success) {
-                    // Actualizar stock visual
-                    const li = rewardList.querySelector(`li[data-id="${data.id_recompensa}"]`);
-                    if (li) {
-                        li.querySelectorAll("small.text-muted, span.badge, br").forEach(el => el.remove());
-                        if (data.nuevo_stock > 0) {
-                            const stock = document.createElement("small");
-                            stock.classList.add("text-muted");
-                            stock.textContent = "Stock: " + data.nuevo_stock;
-                            li.querySelector("div").appendChild(document.createElement("br"));
-                            li.querySelector("div").appendChild(stock);
-                        } else {
-                            li.classList.add("text-muted", "opacity-75", "bg-light");
-                            const badge = document.createElement("span");
-                            badge.classList.add("badge", "bg-secondary");
-                            badge.textContent = "Agotado";
-                            li.querySelector("div").appendChild(document.createElement("br"));
-                            li.querySelector("div").appendChild(badge);
-                            const btnCanje = li.querySelector("button[title='Canjear']");
-                            if (btnCanje) btnCanje.disabled = true;
-                        }
-                    }
-
-                    // Actualizar puntos en la UI (sin 'pts' extra; mantené el formato que uses)
-                    const puntosSpan = document.getElementById("puntos-colaborador");
-                    if (puntosSpan) puntosSpan.textContent = data.puntos_restantes;
-
-                    // Usar la función de alertas ya existente para mostrar éxito
-                    mostrarAlerta("✅ Recompensa canjeada correctamente", "success");
+                    // actualizar stock y puntos...
                 } else {
-                    // Mostrar error con la función de alertas
                     mostrarAlerta("❌ " + (data.error || "No se pudo canjear la recompensa"), "danger");
                 }
             } catch (err) {
@@ -902,6 +1131,56 @@ function abrirModalConfirmCanje(nombreRecompensa, onConfirm) {
 
     modal.show();
 }
+
+function refrescarTodoConBoton() {
+    const grupoId = obtenerGrupoIdDesdeURL();
+    const role = document.body.dataset.role; // lee admin o colaborador
+
+    let ajaxUrl;
+    if (role === "admin") {
+        ajaxUrl = "grupo_ajax.php?id=" + grupoId;
+    } else {
+        ajaxUrl = "../../administrador/grupo/grupo_ajax.php?id=" + grupoId;
+    }
+
+    const tick = () => {
+        fetch(ajaxUrl)
+            .then(res => {
+                if (!res.ok) throw new Error("HTTP " + res.status);
+                return res.json();
+            })
+            .then(data => {
+                if (!data.success) {
+                    console.error("Error en grupo_ajax:", data.error);
+                    return;
+                }
+
+                // Pintar cada sección con sus datos
+                renderizarMiembros(data.miembros, data.isAdmin);
+                renderizarTareas(data.tareas, data.isAdmin);
+                renderizarRecompensas(data.recompensas, data.isAdmin);
+                renderizarHistorial(data.historial);
+                renderizarAprobarTareas(data.tareas_realizadas);
+
+                // Actualizar puntaje del colaborador si existe el span
+                const puntosSpan = document.getElementById("puntos-colaborador");
+                if (puntosSpan) {
+                    puntosSpan.textContent = data.puntos;
+                }
+            })
+            .catch(err => console.error("Error refrescando grupo:", err));
+    };
+
+    // Enganchar al botón
+    const btn = document.getElementById("btn-recargar");
+    if (btn) {
+        btn.addEventListener("click", tick);
+    }
+
+    // Si querés que cargue una vez al entrar:
+    tick();
+}
+
 
 
 

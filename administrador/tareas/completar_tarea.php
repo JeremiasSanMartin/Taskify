@@ -2,13 +2,15 @@
 session_start();
 require_once '../../includes/connection.php';
 
+header('Content-Type: application/json; charset=utf-8');
+
 $id_tarea = $_POST['id_tarea'] ?? null;
 $id_grupo = $_POST['id_grupo'] ?? null;
 $userEmail = $_SESSION['email'] ?? null;
 
 if (!$id_tarea || !$id_grupo || !$userEmail) {
     http_response_code(400);
-    echo "Datos incompletos";
+    echo json_encode(['success' => false, 'error' => 'Datos incompletos']);
     exit;
 }
 
@@ -19,7 +21,7 @@ $id_usuario = $stmt->fetchColumn();
 
 if (!$id_usuario) {
     http_response_code(403);
-    echo "Usuario no encontrado";
+    echo json_encode(['success' => false, 'error' => 'Usuario no encontrado']);
     exit;
 }
 
@@ -32,7 +34,7 @@ $gu = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$gu) {
     http_response_code(403);
-    echo "Usuario no pertenece al grupo";
+    echo json_encode(['success' => false, 'error' => 'Usuario no pertenece al grupo']);
     exit;
 }
 
@@ -44,13 +46,15 @@ try {
     $stmt = $conn->prepare("SELECT asignadoA, puntos FROM tarea WHERE id_tarea = :tid AND grupo_id = :gid");
     $stmt->execute([':tid' => $id_tarea, ':gid' => $id_grupo]);
     $tareaData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$tareaData) {
+        echo json_encode(['success' => false, 'error' => 'Tarea no encontrada']);
+        exit;
+    }
+
     $usuarioAsignado = $tareaData['asignadoA'];
     $puntosTarea = (int) $tareaData['puntos'];
 
-    // grupo_usuario_id del asignado
-    $stmt = $conn->prepare("SELECT id_grupo_usuario FROM grupousuario WHERE grupo_id = :gid AND usuario_id = :uid");
-    $stmt->execute([':gid' => $id_grupo, ':uid' => $usuarioAsignado]);
-    $grupo_usuario_id_asignado = $stmt->fetchColumn();
     if ($rol === 'administrador') {
         // Admin aprueba directamente
         $stmt = $conn->prepare("
@@ -64,14 +68,17 @@ try {
         $stmt = $conn->prepare("
             INSERT INTO historialgrupousuario
             (fecha, puntosOtorgados, puntosCanjeados, estadoTarea, grupo_usuario_id, tarea_id_tarea, recompensa_id_recompensa)
-            VALUES (CURDATE(), 0, NULL, 2, :grupo_usuario_id, :tarea_id, NULL)
+            VALUES (NOW(), :puntos, NULL, 2, :grupo_usuario_id, :tarea_id, NULL)
         ");
         $stmt->execute([
+            ':puntos' => $puntosTarea,
             ':grupo_usuario_id' => $grupo_usuario_id,
             ':tarea_id' => $id_tarea
         ]);
+
+        echo json_encode(['success' => true, 'estado' => 'aprobada', 'id_tarea' => $id_tarea]);
     } else {
-        // Colaborador: solo marca como realizada para que la apruebe un admin
+        // Colaborador: marca como realizada
         $stmt = $conn->prepare("
             UPDATE tarea
             SET estado = 'realizada', fecha_entrega = NOW()
@@ -83,21 +90,16 @@ try {
         $stmt = $conn->prepare("
             INSERT INTO historialgrupousuario
             (fecha, puntosOtorgados, puntosCanjeados, estadoTarea, grupo_usuario_id, tarea_id_tarea, recompensa_id_recompensa)
-            VALUES (CURDATE(), 0, NULL, 1, :grupo_usuario_id, :tarea_id, NULL)
+            VALUES (NOW(), 0, NULL, 1, :grupo_usuario_id, :tarea_id, NULL)
         ");
         $stmt->execute([
             ':grupo_usuario_id' => $grupo_usuario_id,
             ':tarea_id' => $id_tarea
         ]);
-    }
 
-    if ($rol === 'administrador') {
-        header("Location: ver_grupo.php?id=$id_grupo");
-    } else {
-        header("Location: ../../colaborador/grupo/ver_grupo.php?id=$id_grupo");
+        echo json_encode(['success' => true, 'estado' => 'realizada', 'id_tarea' => $id_tarea]);
     }
-    exit;
 } catch (PDOException $e) {
     http_response_code(500);
-    echo "Error: " . $e->getMessage();
+    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
