@@ -33,77 +33,13 @@ $stmt = $conn->prepare("SELECT nombre, tipo FROM grupo WHERE id_grupo = :id");
 $stmt->execute([':id' => $id_grupo]);
 $grupo = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// Obtener miembros activos
-$stmt = $conn->prepare("
-    SELECT u.id_usuario, u.nombre, gu.rol
-    FROM grupousuario gu
-    JOIN usuario u ON gu.usuario_id = u.id_usuario
-    WHERE gu.grupo_id = :id AND gu.estado = 1
-");
+//cant de miembros
+$stmt = $conn->prepare("SELECT COUNT(*) FROM grupousuario WHERE grupo_id = :id AND estado = 1");
 $stmt->execute([':id' => $id_grupo]);
-$miembros = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$total_miembros = $stmt->fetchColumn();
 
-$total_miembros = count($miembros ?? []);
 $userName = htmlspecialchars($_SESSION['nombre']);
 $userEmail = htmlspecialchars($_SESSION['email']);
-
-// Obtener tareas asignadas al colaborador
-$stmt = $conn->prepare("
-    SELECT t.id_tarea, t.titulo, t.descripcion, t.puntos, t.fecha_limite
-    FROM tarea t
-    WHERE t.grupo_id = :grupo_id AND t.estado = 'pendiente' AND t.asignadoA = :usuario_id
-    ORDER BY t.fecha_limite ASC
-");
-$stmt->execute([':grupo_id' => $id_grupo, ':usuario_id' => $usuario_id]);
-$tareas_asignadas = $stmt->fetchAll(PDO::FETCH_ASSOC);
-// Obtener historial del colaborador
-$stmt = $conn->prepare("
-    SELECT h.fecha, h.puntosOtorgados, h.estadoTarea,
-           u.nombre AS usuario, t.titulo AS tarea
-    FROM historialgrupousuario h
-    LEFT JOIN grupousuario gu ON h.grupo_usuario_id = gu.id_grupo_usuario
-    LEFT JOIN usuario u ON gu.usuario_id = u.id_usuario
-    LEFT JOIN tarea t ON h.tarea_id_tarea = t.id_tarea
-    WHERE gu.grupo_id = :grupo_id
-    ORDER BY h.fecha DESC, h.id_historialGrupoUsuario DESC
-");
-$stmt->execute([':grupo_id' => $id_grupo]);
-$historial = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Obtener recompensas del grupo
-$recompensas = [];
-
-try {
-    $stmt = $conn->prepare("
-        SELECT id_recompensa, nombre AS titulo, descripcion, costo_puntos AS costo, disponibilidad
-        FROM recompensa
-        WHERE grupo_id = :grupo_id
-        ORDER BY id_recompensa DESC
-    ");
-    $stmt->execute([':grupo_id' => $id_grupo]);
-    $recompensas = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    $_SESSION['mensaje'] = [
-        'tipo' => 'danger',
-        'texto' => '❌ Error al cargar recompensas: ' . $e->getMessage()
-    ];
-}
-
-// Obtener id_grupo_usuario y puntaje del colaborador
-$stmt = $conn->prepare("
-    SELECT id_grupo_usuario, puntos
-    FROM grupousuario
-    WHERE grupo_id = :gid AND usuario_id = :uid AND estado = 1
-");
-$stmt->execute([':gid' => $id_grupo, ':uid' => $usuario_id]);
-$grupoUsuario = $stmt->fetch(PDO::FETCH_ASSOC);
-
-$id_grupo_usuario = $grupoUsuario['id_grupo_usuario'] ?? null;
-$puntos_actuales = $grupoUsuario['puntos'] ?? 0;
-
-
-
-
 ?>
 
 <!DOCTYPE html>
@@ -188,6 +124,9 @@ $puntos_actuales = $grupoUsuario['puntos'] ?? 0;
                 <button class="btn btn-danger btn-lg px-4" data-bs-toggle="modal" data-bs-target="#abandonarGrupoModal">
                     <i class="bi bi-box-arrow-left me-1"></i> Abandonar
                 </button>
+                <button id="btn-recargar" class="btn btn-primary btn-lg">
+                    <i class="bi bi-arrow-clockwise"></i> Recargar datos
+                </button>
             </div>
         </header>
 
@@ -196,13 +135,7 @@ $puntos_actuales = $grupoUsuario['puntos'] ?? 0;
             <div id="miembros-section" class="content-section active">
                 <div class="content-card p-3">
                     <h3><i class="bi bi-people"></i> Miembros</h3>
-                    <ul class="list-group">
-                        <?php foreach ($miembros as $miembro): ?>
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <?= htmlspecialchars($miembro['nombre']) ?>
-                                <?= $miembro['rol'] === 'administrador' ? '(Admin)' : '' ?>
-                            </li>
-                        <?php endforeach; ?>
+                    <ul class="list-group" id="member-list">
                     </ul>
                 </div>
             </div>
@@ -211,31 +144,7 @@ $puntos_actuales = $grupoUsuario['puntos'] ?? 0;
             <div id="tareas-section" class="content-section">
                 <div class="content-card p-3">
                     <h3><i class="bi bi-list-check"></i> Mis Tareas</h3>
-                    <ul class="list-group mt-3">
-                        <?php if (empty($tareas_asignadas)): ?>
-                            <li class="list-group-item text-muted">No tenés tareas pendientes asignadas.</li>
-                        <?php else: ?>
-                            <?php foreach ($tareas_asignadas as $t): ?>
-                                <li
-                                    class="list-group-item d-flex justify-content-between align-items-start flex-column flex-md-row">
-                                    <div>
-                                        <strong><?= htmlspecialchars($t['titulo']) ?></strong> - <?= $t['puntos'] ?> pts<br>
-                                        <small><?= htmlspecialchars($t['descripcion']) ?></small><br>
-                                        <small class="text-muted">Fecha límite:
-                                            <?= date('d/m/Y', strtotime($t['fecha_limite'])) ?></small>
-                                    </div>
-                                    <form action="../../administrador/tareas/completar_tarea.php" method="POST"
-                                        class="mt-2 mt-md-0">
-                                        <input type="hidden" name="id_tarea" value="<?= $t['id_tarea'] ?>">
-                                        <input type="hidden" name="id_grupo" value="<?= $id_grupo ?>">
-                                        <button type="submit" class="btn btn-sm btn-outline-success"
-                                            title="Marcar como realizada">
-                                            <i class="bi bi-check-circle"></i>
-                                        </button>
-                                    </form>
-                                </li>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
+                    <ul class="list-group mt-3" id="task-list">
                     </ul>
                 </div>
             </div>
@@ -250,35 +159,7 @@ $puntos_actuales = $grupoUsuario['puntos'] ?? 0;
                             <?= $puntos_actuales ?>
                         </span> pts
                     </p>
-
-
-
-
                     <ul id="reward-list" class="list-group mt-3">
-                        <?php if (empty($recompensas)): ?>
-                            <li class="list-group-item text-muted">No hay recompensas disponibles.</li>
-                        <?php else: ?>
-                            <?php foreach ($recompensas as $r): ?>
-                                <li class="list-group-item d-flex justify-content-between align-items-start flex-column flex-md-row"
-                                    data-id="<?= $r['id_recompensa'] ?>">
-                                    <div>
-                                        <strong><?= htmlspecialchars($r['titulo']) ?></strong> - <?= $r['costo'] ?> pts<br>
-                                        <small class="text-muted"><?= htmlspecialchars($r['descripcion']) ?></small><br>
-                                        <?php if ($r['disponibilidad'] > 0): ?>
-                                            <small class="text-muted">Stock: <?= $r['disponibilidad'] ?></small>
-                                        <?php else: ?>
-                                            <span class="badge bg-secondary">Agotado</span>
-                                        <?php endif; ?>
-                                    </div>
-                                    <button class="btn btn-sm btn-outline-primary mt-2 mt-md-0" title="Canjear"
-                                        data-id="<?= $r['id_recompensa'] ?>" data-grupo="<?= $id_grupo ?>"
-                                        data-nombre="<?= htmlspecialchars($r['titulo']) ?>" <?= $r['disponibilidad'] <= 0 ? 'disabled' : '' ?>>
-                                        <i class="bi bi-cart-check"></i> Canjear
-                                    </button>
-
-                                </li>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
                     </ul>
                 </div>
             </div>

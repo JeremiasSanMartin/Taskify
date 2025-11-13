@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function initGroupPage() {
 
-    refrescarTodoPeriodicamente();
+    refrescarTodoConBoton();
 
     //MIEMBROS
     handleSidebarNavigation();
@@ -21,6 +21,7 @@ function initGroupPage() {
     editarTareaConModal();
     eliminarTareaConModal();
     configurarBotonCompletarTarea();
+    configurarBotonesAprobarRechazar()
 
     //RECOMPENSAS
     crearRecompensa();
@@ -375,28 +376,77 @@ function configurarModalEditarTarea() {
 
 //completar tarea
 function configurarBotonCompletarTarea() {
-    document.querySelectorAll(".complete-task-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const idTarea = btn.getAttribute("data-id");
-            const idGrupo = new URLSearchParams(window.location.search).get("id");
+    const taskList = document.getElementById("task-list");
+    if (!taskList) return;
 
-            if (!idTarea || !idGrupo) {
-                console.error("Faltan datos para completar tarea");
-                return;
+    taskList.addEventListener("click", (e) => {
+        const btn = e.target.closest(".complete-task-btn");
+        if (!btn) return;
+
+        const idTarea = btn.dataset.id;
+        const idGrupo = new URLSearchParams(window.location.search).get("id");
+
+        if (!idTarea || !idGrupo) {
+            console.error("Faltan datos para completar tarea");
+            return;
+        }
+
+        fetch("../../administrador/tareas/completar_tarea.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: `id_tarea=${encodeURIComponent(idTarea)}&id_grupo=${encodeURIComponent(idGrupo)}`
+        })
+        .then(res => res.json())
+        .then(data => {
+            console.log("Respuesta completar_tarea:", data);
+            if (data.success) {
+                // refrescar lista sin recargar toda la página
+                refrescarTodoConBoton();
+            } else {
+                alert(data.error || "Error al completar tarea");
             }
+        })
+        .catch(err => console.error("Error al completar tarea:", err));
+    });
+}
+function configurarBotonesAprobarRechazar() {
+    const lista = document.getElementById("approve-task-list");
+    if (!lista) return;
 
-            fetch("/../../administrador/tareas/completar_tarea.php", {
+    lista.addEventListener("click", (e) => {
+        const approveBtn = e.target.closest(".approve-task-btn");
+        const rejectBtn = e.target.closest(".reject-task-btn");
+        const idGrupo = new URLSearchParams(window.location.search).get("id");
+
+        if (approveBtn) {
+            const idTarea = approveBtn.dataset.id;
+            fetch("../tareas/aprobar_tarea.php", {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: `id_tarea=${encodeURIComponent(idTarea)}&id_grupo=${encodeURIComponent(idGrupo)}`
             })
-                .then(res => res.text())
-                .then(data => {
-                    console.log("Respuesta completar_tarea:", data);
-                    window.location.href = `ver_grupo.php?id=${idGrupo}&section=tareas`;
-                })
-                .catch(err => console.error("Error al completar tarea:", err));
-        });
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) refrescarTodoConBoton();
+                else alert(data.error || "Error al aprobar tarea");
+            })
+            .catch(err => console.error("Error al aprobar tarea:", err));
+        }
+
+        if (rejectBtn) {
+            const idTarea = rejectBtn.dataset.id;
+            fetch("../tareas/rechazar_tarea.php", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: `id_tarea=${encodeURIComponent(idTarea)}&id_grupo=${encodeURIComponent(idGrupo)}`
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) refrescarTodoConBoton();
+                else alert(data.error || "Error al rechazar tarea");
+            })
+            .catch(err => console.error("Error al rechazar tarea:", err));
+        }
     });
 }
 
@@ -1082,7 +1132,7 @@ function abrirModalConfirmCanje(nombreRecompensa, onConfirm) {
     modal.show();
 }
 
-function refrescarTodoPeriodicamente() {
+function refrescarTodoConBoton() {
     const grupoId = obtenerGrupoIdDesdeURL();
     const role = document.body.dataset.role; // lee admin o colaborador
 
@@ -1105,7 +1155,6 @@ function refrescarTodoPeriodicamente() {
                     return;
                 }
 
-
                 // Pintar cada sección con sus datos
                 renderizarMiembros(data.miembros, data.isAdmin);
                 renderizarTareas(data.tareas, data.isAdmin);
@@ -1122,11 +1171,14 @@ function refrescarTodoPeriodicamente() {
             .catch(err => console.error("Error refrescando grupo:", err));
     };
 
-    // Primera carga inmediata
-    tick();
+    // Enganchar al botón
+    const btn = document.getElementById("btn-recargar");
+    if (btn) {
+        btn.addEventListener("click", tick);
+    }
 
-    // Refresco cada 1 segundo
-    setInterval(tick, 1000);
+    // Si querés que cargue una vez al entrar:
+    tick();
 }
 
 
