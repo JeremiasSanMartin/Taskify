@@ -5,9 +5,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function initGroupPage() {
 
-    cargarConfiguracion();
-    editarGrupoDesdeConfiguracion();
-    sincronizarModalEditarGrupo();
+    const role = document.body.dataset.role || "colaborador";
+
+    if (role === "admin") {
+        cargarConfiguracionAdministrador();
+        editarGrupoDesdeConfiguracion();
+        sincronizarModalEditarGrupo();
+    } else {
+        cargarConfiguracionColaborador();
+    }
     refrescarTodoConBoton();
 
     //MIEMBROS
@@ -1306,7 +1312,7 @@ function refrescarTodoConBoton() {
     tick();
 }
 
-function cargarConfiguracion() {
+function cargarConfiguracionAdministrador() {
     const grupoId = new URLSearchParams(window.location.search).get("id");
     if (!grupoId) return;
 
@@ -1382,3 +1388,82 @@ function cargarConfiguracion() {
         });
 }
 
+// Cargar configuración para colaborador (role-aware, sin stats, con copiar y abandonar)
+function cargarConfiguracionColaborador() {
+    const grupoId = new URLSearchParams(window.location.search).get("id");
+    if (!grupoId) return;
+
+    fetch(`../../colaborador/configuracion/configuracion.php?id=${grupoId}`)
+        .then(async (res) => {
+            const raw = await res.text();
+            let data;
+            try { data = JSON.parse(raw); }
+            catch {
+                throw new Error(`Respuesta no JSON (HTTP ${res.status}): ${raw.slice(0, 120)}...`);
+            }
+
+            if (!res.ok || !data.success) {
+                throw new Error(data?.error || `HTTP ${res.status}`);
+            }
+
+            const cont = document.getElementById("configuracion-container");
+            if (!cont) return;
+
+            const tipoBonito = data.tipo ? (data.tipo[0].toUpperCase() + data.tipo.slice(1)) : "";
+            const desc = (data.descripcion || "").trim();
+
+            // Pintamos únicamente nombre, categoría, descripción, código y acciones (copiar / abandonar)
+            cont.innerHTML = `
+          <div class="config-header d-flex align-items-center justify-content-between flex-wrap">
+          <div>
+            <h4 class="mb-1 d-flex align-items-center gap-2">
+              <i class="bi bi-info-circle"></i> Información del grupo
+            </h4>
+            <div class="d-flex align-items-center gap-2">
+              <span class="config-name" data-field="nombre">${escapeHtml(data.nombre)}</span>
+              <span class="badge rounded-pill config-badge" data-field="tipo">${escapeHtml(tipoBonito)}</span>
+            </div>
+          </div>
+          <!-- Sin estadísticas para colaborador -->
+        </div>
+
+        ${desc ? `
+        <div class="config-description mt-3" data-field="descripcion">
+          <h6 class="text-muted mb-2">Descripción</h6>
+          <p class="mb-0">${escapeHtml(desc)}</p>
+        </div>` : ""}
+
+        <div class="config-actions-footer mt-3">
+          <div class="row g-2">
+            <div class="col-12 col-md-6">
+              <button id="btnCopiarCodigo" class="btn btn-outline-secondary w-100" data-codigo="${escapeAttr(data.codigo)}">
+                <i class="bi bi-link-45deg"></i> Copiar código
+              </button>
+            </div>
+            <div class="col-12 col-md-6">
+              <button class="btn btn-outline-danger w-100" data-bs-toggle="modal" data-bs-target="#abandonarGrupoModal">
+                <i class="bi bi-box-arrow-left"></i> Abandonar grupo
+              </button>
+            </div>
+          </div>
+        </div>
+        `;
+
+            configurarBotonCopiarCodigo();
+        })
+        .catch((err) => {
+            console.error("Error al cargar configuración (colaborador):", err);
+            const cont = document.getElementById("configuracion-container");
+            if (cont) {
+                cont.innerHTML = `<div class="alert alert-danger">Error al cargar configuración.</div>`;
+            }
+        });
+}
+
+// Utilidades de escape para seguridad XSS (en caso de que no estén ya definidas)
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+function escapeAttr(str) { return escapeHtml(str).replace(/"/g, "&quot;"); }

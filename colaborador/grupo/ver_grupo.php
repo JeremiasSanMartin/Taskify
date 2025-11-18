@@ -89,6 +89,10 @@ $userEmail = htmlspecialchars($_SESSION['email']);
                 <i class="bi bi-clock-history"></i>
                 <span>Historial</span>
             </a>
+            <a href="#" class="menu-item" data-section="configuracion">
+                <i class="bi bi-gear-fill"></i>
+                <span>Configuración</span>
+            </a>
         </div>
 
         <!-- Footer -->
@@ -108,22 +112,8 @@ $userEmail = htmlspecialchars($_SESSION['email']);
 
     <!-- Main Content -->
     <main class="main-content">
-        <header class="dashboard-header d-flex align-items-center justify-content-between flex-wrap w-100">
-            <div class="d-flex flex-column">
-                <h1 class="page-title mb-0 d-flex align-items-center gap-2">
-                    <i class="bi bi-people-fill"></i>
-                    <?= htmlspecialchars($grupo['nombre']) ?>
-                </h1>
-                <p class="page-subtitle mt-1">
-                    Categoría: <span id="group-category"><?= strtoupper($grupo['tipo']) ?></span> •
-                    <span id="group-members-count"><?= $total_miembros ?>
-                        <?= $total_miembros == 1 ? 'miembro' : 'miembros' ?></span>
-                </p>
-            </div>
-            <div class="d-flex align-items-center gap-2 ms-auto">
-                <button class="btn btn-danger btn-lg px-4" data-bs-toggle="modal" data-bs-target="#abandonarGrupoModal">
-                    <i class="bi bi-box-arrow-left me-1"></i> Abandonar
-                </button>
+        <header class="dashboard-header w-100">
+            <div class="w-100 d-flex justify-content-center mt-3">
                 <button id="btn-recargar" class="btn btn-primary btn-lg">
                     <i class="bi bi-arrow-clockwise"></i> Recargar datos
                 </button>
@@ -173,6 +163,12 @@ $userEmail = htmlspecialchars($_SESSION['email']);
                 </div>
             </div>
 
+            <!-- Configuración -->
+            <div id="configuracion-section" class="content-section">
+                <div class="content-card p-3" id="configuracion-container">
+                    <!-- Se llenará dinámicamente por cargarConfiguracionColaborador() -->
+                </div>
+            </div>
 
         </div>
     </main>
