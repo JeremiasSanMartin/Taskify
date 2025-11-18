@@ -147,24 +147,6 @@ $userEmail = htmlspecialchars($_SESSION['email']);
     <!-- Main Content -->
     <main class="main-content">
         <header class="dashboard-header d-flex justify-content-between align-items-center flex-wrap w-100">
-            <!-- Columna izquierda: info del grupo -->
-            <div class="d-flex flex-column">
-                <h1 class="page-title mb-0 d-flex align-items-center gap-2">
-                    <i class="bi bi-people-fill"></i>
-                    <?= htmlspecialchars($grupo['nombre']) ?>
-                </h1>
-                <p class="page-subtitle mt-1 mb-0">
-                    Categoría: <span id="group-category"><?= strtoupper($grupo['tipo']) ?></span> •
-                    <span id="group-members-count"><?= $total_miembros ?>
-                        <?= $total_miembros == 1 ? 'miembro' : 'miembros' ?></span>
-                </p>
-                <?php if (!empty($grupo['descripcion'])): ?>
-                    <p class="group-description mt-2 text-muted">
-                        <?= nl2br(htmlspecialchars($grupo['descripcion'])) ?>
-                    </p>
-                <?php endif; ?>
-            </div>
-
             <!-- ALERTAS -->
             <?php if (isset($_SESSION['mensaje'])): ?>
                 <div class="alert alert-<?= $_SESSION['mensaje']['tipo'] ?> alert-dismissible fade show" role="alert">
@@ -174,23 +156,8 @@ $userEmail = htmlspecialchars($_SESSION['email']);
                 <?php unset($_SESSION['mensaje']); ?>
             <?php endif; ?>
 
-            <!-- Columna centro: código de invitación -->
-            <div class="d-flex justify-content-center flex-grow-1">
-                <button id="btnCopiarCodigo" class="badge bg-light text-dark border border-secondary px-4 py-2 fs-6"
-                    style="cursor: pointer;" data-codigo="<?= htmlspecialchars($grupo['codigo_invitacion']) ?>">
-                    <i class="bi bi-link-45deg me-1"></i>
-                    Código de invitación: <strong><?= htmlspecialchars($grupo['codigo_invitacion']) ?></strong>
-                </button>
-            </div>
-
             <!-- Columna derecha: botones -->
             <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-primary btn-lg px-4" data-bs-toggle="modal" data-bs-target="#editarGrupoModal">
-                    <i class="bi bi-pencil-square me-1"></i> Editar
-                </button>
-                <button class="btn btn-danger btn-lg px-4" data-bs-toggle="modal" data-bs-target="#eliminarGrupoModal">
-                    <i class="bi bi-trash me-1"></i> Eliminar
-                </button>
                 <button id="btn-recargar" class="btn btn-primary btn-lg">
                     <i class="bi bi-arrow-clockwise"></i> Recargar datos
                 </button>
@@ -261,9 +228,8 @@ $userEmail = htmlspecialchars($_SESSION['email']);
 
             <!-- Configuración -->
             <div id="configuracion-section" class="content-section">
-                <div class="content-card p-3">
-                    <h3><i class="bi bi-gear-fill"></i> Configuración</h3>
-                    <p>aca van las diferentes configuraciones</p>
+                <div class="content-card p-3" id="configuracion-container">
+                    <!-- Aquí se pintará la ficha del grupo -->
                 </div>
             </div>
 
@@ -314,7 +280,7 @@ $userEmail = htmlspecialchars($_SESSION['email']);
                     no se podrá recuperar. ¿Estás seguro?
                 </div>
                 <div class="modal-footer">
-                    <form action="eliminar_grupo.php" method="POST">
+                    <form action="../grupo/eliminar_grupo.php" method="POST">
                         <input type="hidden" name="id_grupo" value="<?php echo $id_grupo; ?>">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                         <button type="submit" class="btn btn-danger">Eliminar</button>
@@ -327,7 +293,7 @@ $userEmail = htmlspecialchars($_SESSION['email']);
     <!-- Modal Editar Grupo -->
     <div class="modal fade" id="editarGrupoModal" tabindex="-1" aria-labelledby="editarGrupoLabel" aria-hidden="true">
         <div class="modal-dialog">
-            <form action="editar_grupo.php" method="POST" class="modal-content">
+            <form id="formEditarGrupo" action="../grupo/editar_grupo.php" method="POST" class="modal-content">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title" id="editarGrupoLabel">Editar grupo</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
@@ -352,6 +318,13 @@ $userEmail = htmlspecialchars($_SESSION['email']);
                                 echo 'selected'; ?>>Personal
                             </option>
                         </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="descripcionGrupo" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="descripcionGrupo" name="descripcion" rows="3"
+                            spellcheck="false"><?=
+                                htmlspecialchars(trim($grupo['descripcion'] ?? ''))
+                                ?></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -482,7 +455,7 @@ $userEmail = htmlspecialchars($_SESSION['email']);
     <!-- Modal Editar Tarea -->
     <div class="modal fade" id="editarTareaModal" tabindex="-1" aria-labelledby="editarTareaLabel" aria-hidden="true">
         <div class="modal-dialog">
-            <form id="formEditarTarea" action="../tareas/editar_tarea.php" method="POST" class="modal-content">
+            <form id="formEditarTarea" action="../tarea/editar_tarea.php" method="POST" class="modal-content">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title" id="editarTareaLabel">Editar tarea</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>

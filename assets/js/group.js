@@ -5,6 +5,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function initGroupPage() {
 
+    cargarConfiguracion();
+    editarGrupoDesdeConfiguracion();
+    sincronizarModalEditarGrupo();
     refrescarTodoConBoton();
 
     //MIEMBROS
@@ -127,6 +130,115 @@ function configurarModalExpulsion() {
         document.getElementById("idUsuarioExpulsar").value = idUsuario;
     });
 }
+
+function editarGrupoDesdeConfiguracion() {
+    const form = document.getElementById("formEditarGrupo");
+    const modal = document.getElementById("editarGrupoModal");
+    if (!form || !modal) return;
+
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const formData = new FormData(form);
+
+        try {
+            const res = await fetch(form.action, { method: "POST", body: formData });
+            const raw = await res.text();
+            let data;
+            try {
+                data = JSON.parse(raw);
+            } catch {
+                console.error("Respuesta no JSON:", raw);
+                mostrarAlerta(`❌ Respuesta no válida del servidor (HTTP ${res.status}).`, "danger");
+                return;
+            }
+
+            if (!res.ok || !data.success) {
+                const errorMsg = data?.error || `HTTP ${res.status}`;
+                mostrarAlerta("❌ Error al editar grupo: " + errorMsg, "danger");
+                return;
+            }
+
+            const categoriaBonita = data.tipo ? (data.tipo[0].toUpperCase() + data.tipo.slice(1)) : "";
+            const cont = document.getElementById("configuracion-container");
+            if (cont) {
+                const nombreEl = cont.querySelector('[data-field="nombre"]');
+                const tipoEl = cont.querySelector('[data-field="tipo"]');
+                const descItem = cont.querySelector('[data-field="descripcion"]');
+
+                if (nombreEl) nombreEl.textContent = data.nombre;
+                if (tipoEl) tipoEl.textContent = categoriaBonita;
+
+                const desc = (data.descripcion || "").trim();
+                if (desc) {
+                    if (descItem) {
+                        const p = descItem.querySelector("p");
+                        if (p) {
+                            p.textContent = desc;
+                        } else {
+                            const span = descItem.querySelector("span");
+                            if (span) span.textContent = desc;
+                            else {
+                                const nuevoP = document.createElement("p");
+                                nuevoP.className = "mb-0";
+                                nuevoP.textContent = desc;
+                                descItem.appendChild(nuevoP);
+                            }
+                        }
+                    } else {
+                        const nuevoDiv = document.createElement("div");
+                        nuevoDiv.className = "config-description mt-3";
+                        nuevoDiv.setAttribute("data-field", "descripcion");
+                        nuevoDiv.innerHTML = `
+                <h6 class="text-muted mb-2">Descripción</h6>
+                <p class="mb-0">${desc}</p>
+              `;
+                        cont.insertBefore(nuevoDiv, cont.querySelector(".config-actions-footer"));
+                    }
+                } else if (descItem) {
+                    descItem.remove();
+                }
+            }
+
+            const bsModal = bootstrap.Modal.getInstance(modal);
+            if (bsModal) bsModal.hide();
+            form.reset();
+            mostrarAlerta("✏️ Grupo editado correctamente", "info");
+        } catch (err) {
+            console.error("Error en fetch editar_grupo:", err);
+            mostrarAlerta("❌ Error inesperado al editar grupo", "danger");
+        }
+    });
+}
+
+function sincronizarModalEditarGrupo() {
+    const modal = document.getElementById("editarGrupoModal");
+    if (!modal) return;
+
+    modal.addEventListener("show.bs.modal", () => {
+        const cont = document.getElementById("configuracion-container");
+        if (!cont) return;
+
+        const nombreEl = cont.querySelector('[data-field="nombre"]');
+        const tipoEl = cont.querySelector('[data-field="tipo"]');
+        const descItem = cont.querySelector('[data-field="descripcion"]');
+
+        const nombre = nombreEl?.textContent?.trim() || "";
+        const tipo = tipoEl?.textContent?.trim().toLowerCase() || "";
+        const desc = descItem?.querySelector("p")?.textContent?.trim()
+            || descItem?.querySelector("span")?.textContent?.trim()
+            || "";
+
+        // Rellenar campos del modal con valores actuales
+        const nombreInput = modal.querySelector("#nombreGrupo");
+        const tipoSelect = modal.querySelector("#tipoGrupo");
+        const descTextarea = modal.querySelector("#descripcionGrupo");
+
+        if (nombreInput) nombreInput.value = nombre;
+        if (tipoSelect && tipo) tipoSelect.value = tipo; // familiar/laboral/personal
+        if (descTextarea) descTextarea.value = desc;
+    });
+}
+
 
 function crearTareaConModal() {
 
@@ -396,17 +508,17 @@ function configurarBotonCompletarTarea() {
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: `id_tarea=${encodeURIComponent(idTarea)}&id_grupo=${encodeURIComponent(idGrupo)}`
         })
-        .then(res => res.json())
-        .then(data => {
-            console.log("Respuesta completar_tarea:", data);
-            if (data.success) {
-                // refrescar lista sin recargar toda la página
-                refrescarTodoConBoton();
-            } else {
-                alert(data.error || "Error al completar tarea");
-            }
-        })
-        .catch(err => console.error("Error al completar tarea:", err));
+            .then(res => res.json())
+            .then(data => {
+                console.log("Respuesta completar_tarea:", data);
+                if (data.success) {
+                    // refrescar lista sin recargar toda la página
+                    refrescarTodoConBoton();
+                } else {
+                    alert(data.error || "Error al completar tarea");
+                }
+            })
+            .catch(err => console.error("Error al completar tarea:", err));
     });
 }
 function configurarBotonesAprobarRechazar() {
@@ -425,12 +537,12 @@ function configurarBotonesAprobarRechazar() {
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: `id_tarea=${encodeURIComponent(idTarea)}&id_grupo=${encodeURIComponent(idGrupo)}`
             })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) refrescarTodoConBoton();
-                else alert(data.error || "Error al aprobar tarea");
-            })
-            .catch(err => console.error("Error al aprobar tarea:", err));
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) refrescarTodoConBoton();
+                    else alert(data.error || "Error al aprobar tarea");
+                })
+                .catch(err => console.error("Error al aprobar tarea:", err));
         }
 
         if (rejectBtn) {
@@ -440,12 +552,12 @@ function configurarBotonesAprobarRechazar() {
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: `id_tarea=${encodeURIComponent(idTarea)}&id_grupo=${encodeURIComponent(idGrupo)}`
             })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) refrescarTodoConBoton();
-                else alert(data.error || "Error al rechazar tarea");
-            })
-            .catch(err => console.error("Error al rechazar tarea:", err));
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) refrescarTodoConBoton();
+                    else alert(data.error || "Error al rechazar tarea");
+                })
+                .catch(err => console.error("Error al rechazar tarea:", err));
         }
     });
 }
@@ -471,17 +583,14 @@ function configurarBotonCopiarCodigo() {
     const btn = document.getElementById("btnCopiarCodigo");
     if (!btn) return;
 
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
         const codigo = btn.getAttribute("data-codigo");
-        navigator.clipboard.writeText(codigo).then(() => {
-            const toastEl = document.getElementById("copiadoToast");
-            if (toastEl) {
-                const toast = new bootstrap.Toast(toastEl);
-                toast.show();
-            }
-        }).catch(err => {
-            console.error("Error al copiar:", err);
-        });
+        try {
+            await navigator.clipboard.writeText(codigo);
+            mostrarAlerta("🔗 Código copiado al portapapeles", "success");
+        } catch {
+            mostrarAlerta("❌ No se pudo copiar el código", "danger");
+        }
     });
 }
 
@@ -1181,15 +1290,79 @@ function refrescarTodoConBoton() {
     tick();
 }
 
+function cargarConfiguracion() {
+    const grupoId = new URLSearchParams(window.location.search).get("id");
+    if (!grupoId) return;
 
+    fetch(`../configuracion/configuracion.php?id=${grupoId}`)
+        .then(res => res.json())
+        .then(data => {
+            const cont = document.getElementById("configuracion-container");
+            if (!cont) return;
 
+            if (!data.success) {
+                cont.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+                return;
+            }
 
+            const tipoBonito = data.tipo ? (data.tipo[0].toUpperCase() + data.tipo.slice(1)) : "";
+            const expulsados = typeof data.expulsados === "number" ? data.expulsados : 0;
+            const desc = (data.descripcion || "").trim();
 
+            cont.innerHTML = `
+          <div class="config-header d-flex align-items-center justify-content-between flex-wrap">
+            <div>
+              <h4 class="mb-1 d-flex align-items-center gap-2">
+                <i class="bi bi-info-circle"></i> Información del grupo
+              </h4>
+              <div class="d-flex align-items-center gap-2">
+                <span class="config-name" data-field="nombre">${data.nombre}</span>
+                <span class="badge rounded-pill config-badge" data-field="tipo">${tipoBonito}</span>
+              </div>
+            </div>
+            <div class="config-stats d-flex align-items-center gap-2">
+              <span class="stat-badge">
+                <i class="bi bi-people"></i> Activos: <strong data-field="miembros">${data.miembros}</strong>
+              </span>
+              <span class="stat-badge stat-muted">
+                <i class="bi bi-person-x"></i> Expulsados: <strong>${expulsados}</strong>
+              </span>
+            </div>
+          </div>
+  
+          ${desc ? `
+          <div class="config-description mt-3" data-field="descripcion">
+            <h6 class="text-muted mb-2">Descripción</h6>
+            <p class="mb-0">${desc}</p>
+          </div>` : ""}
+  
+          <div class="config-actions-footer mt-3">
+            <div class="row g-2">
+              <div class="col-12 col-md-4">
+                <button id="btnCopiarCodigo" class="btn btn-outline-secondary w-100" data-codigo="${data.codigo}">
+                  <i class="bi bi-link-45deg"></i> Copiar código
+                </button>
+              </div>
+              <div class="col-6 col-md-4">
+                <button class="btn btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#editarGrupoModal">
+                  <i class="bi bi-pencil-square"></i> Editar grupo
+                </button>
+              </div>
+              <div class="col-6 col-md-4">
+                <button class="btn btn-outline-danger w-100" data-bs-toggle="modal" data-bs-target="#eliminarGrupoModal">
+                  <i class="bi bi-trash"></i> Eliminar grupo
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
 
-
-
-
-
-
-
+            configurarBotonCopiarCodigo();
+        })
+        .catch(err => {
+            console.error("Error al cargar configuración:", err);
+            const cont = document.getElementById("configuracion-container");
+            if (cont) cont.innerHTML = `<div class="alert alert-danger">Error al cargar configuración</div>`;
+        });
+}
 
