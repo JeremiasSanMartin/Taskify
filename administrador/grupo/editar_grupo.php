@@ -1,36 +1,47 @@
 <?php
 session_start();
-require_once '../../includes/connection.php';
+require_once __DIR__ . "/../../includes/connection.php";
+header('Content-Type: application/json');
 
-if (!isset($_SESSION['email']) || !isset($_POST['id_grupo'])) {
-    header("Location: ../../index.php");
-    exit();
+$id_grupo = $_POST['id_grupo'] ?? null;
+$nombre = $_POST['nombre'] ?? '';
+$tipo = $_POST['tipo'] ?? '';
+$descripcion = $_POST['descripcion'] ?? '';
+$userEmail = $_SESSION['email'] ?? null;
+
+if (!$id_grupo || !$nombre || !$tipo || !$userEmail) {
+    echo json_encode(['success' => false, 'error' => 'Datos incompletos']);
+    exit;
 }
 
-$email = $_SESSION['email'];
-$id_grupo = $_POST['id_grupo'];
-$nombre = trim($_POST['nombre']);
-$tipo = strtolower(trim($_POST['tipo']));
+try {
+    // validar que el usuario sea admin del grupo
+    $stmt = $conn->prepare("SELECT u.id_usuario, gu.rol 
+        FROM usuario u 
+        JOIN grupousuario gu ON u.id_usuario = gu.usuario_id 
+        WHERE u.email = :email AND gu.grupo_id = :gid");
+    $stmt->execute([':email' => $userEmail, ':gid' => $id_grupo]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// Verificar que el usuario sea administrador del grupo
-$stmt = $conn->prepare("
-    SELECT gu.rol
-    FROM grupousuario gu
-    JOIN usuario u ON gu.usuario_id = u.id_usuario
-    WHERE gu.grupo_id = :id AND u.email = :email
-");
-$stmt->execute([':id' => $id_grupo, ':email' => $email]);
-$rol = $stmt->fetchColumn();
+    if (!$row || $row['rol'] !== 'administrador') {
+        echo json_encode(['success' => false, 'error' => 'No autorizado']);
+        exit;
+    }
 
-if ($rol !== 'administrador') {
-    echo "<p class='text-danger'>No tenés permisos para editar este grupo.</p>";
-    exit();
+    $stmt = $conn->prepare("UPDATE grupo SET nombre = :nombre, tipo = :tipo, descripcion = :desc WHERE id_grupo = :id");
+    $stmt->execute([
+        ':nombre' => $nombre,
+        ':tipo' => strtolower($tipo),
+        ':desc' => $descripcion,
+        ':id' => $id_grupo
+    ]);
+
+    echo json_encode([
+        'success' => true,
+        'nombre' => $nombre,
+        'tipo' => strtolower($tipo),
+        'descripcion' => $descripcion
+    ]);
+} catch (PDOException $e) {
+    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
-
-// Actualizar grupo
-$stmt = $conn->prepare("UPDATE grupo SET nombre = :nombre, tipo = :tipo WHERE id_grupo = :id");
-$stmt->execute([':nombre' => $nombre, ':tipo' => $tipo, ':id' => $id_grupo]);
-
-header("Location: ver_grupo.php?id=" . $id_grupo);
-exit();
-?>

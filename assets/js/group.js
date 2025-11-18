@@ -5,6 +5,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function initGroupPage() {
 
+    cargarConfiguracion();
+    editarGrupoDesdeConfiguracion();
+    sincronizarModalEditarGrupo();
     refrescarTodoConBoton();
 
     //MIEMBROS
@@ -128,9 +131,117 @@ function configurarModalExpulsion() {
     });
 }
 
-function crearTareaConModal() {
+function editarGrupoDesdeConfiguracion() {
+    const form = document.getElementById("formEditarGrupo");
+    const modal = document.getElementById("editarGrupoModal");
+    if (!form || !modal) return;
 
-    document.addEventListener("submit", (e) => {
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const formData = new FormData(form);
+
+        try {
+            const res = await fetch(form.action, { method: "POST", body: formData });
+            const raw = await res.text();
+            let data;
+            try {
+                data = JSON.parse(raw);
+            } catch {
+                console.error("Respuesta no JSON:", raw);
+                mostrarAlerta(`❌ Respuesta no válida del servidor (HTTP ${res.status}).`, "danger");
+                return;
+            }
+
+            if (!res.ok || !data.success) {
+                const errorMsg = data?.error || `HTTP ${res.status}`;
+                mostrarAlerta("❌ Error al editar grupo: " + errorMsg, "danger");
+                return;
+            }
+
+            const categoriaBonita = data.tipo ? (data.tipo[0].toUpperCase() + data.tipo.slice(1)) : "";
+            const cont = document.getElementById("configuracion-container");
+            if (cont) {
+                const nombreEl = cont.querySelector('[data-field="nombre"]');
+                const tipoEl = cont.querySelector('[data-field="tipo"]');
+                const descItem = cont.querySelector('[data-field="descripcion"]');
+
+                if (nombreEl) nombreEl.textContent = data.nombre;
+                if (tipoEl) tipoEl.textContent = categoriaBonita;
+
+                const desc = (data.descripcion || "").trim();
+                if (desc) {
+                    if (descItem) {
+                        const p = descItem.querySelector("p");
+                        if (p) {
+                            p.textContent = desc;
+                        } else {
+                            const span = descItem.querySelector("span");
+                            if (span) span.textContent = desc;
+                            else {
+                                const nuevoP = document.createElement("p");
+                                nuevoP.className = "mb-0";
+                                nuevoP.textContent = desc;
+                                descItem.appendChild(nuevoP);
+                            }
+                        }
+                    } else {
+                        const nuevoDiv = document.createElement("div");
+                        nuevoDiv.className = "config-description mt-3";
+                        nuevoDiv.setAttribute("data-field", "descripcion");
+                        nuevoDiv.innerHTML = `
+                <h6 class="text-muted mb-2">Descripción</h6>
+                <p class="mb-0">${desc}</p>
+              `;
+                        cont.insertBefore(nuevoDiv, cont.querySelector(".config-actions-footer"));
+                    }
+                } else if (descItem) {
+                    descItem.remove();
+                }
+            }
+
+            const bsModal = bootstrap.Modal.getInstance(modal);
+            if (bsModal) bsModal.hide();
+            form.reset();
+            mostrarAlerta("✏️ Grupo editado correctamente", "info");
+        } catch (err) {
+            console.error("Error en fetch editar_grupo:", err);
+            mostrarAlerta("❌ Error inesperado al editar grupo", "danger");
+        }
+    });
+}
+
+function sincronizarModalEditarGrupo() {
+    const modal = document.getElementById("editarGrupoModal");
+    if (!modal) return;
+
+    modal.addEventListener("show.bs.modal", () => {
+        const cont = document.getElementById("configuracion-container");
+        if (!cont) return;
+
+        const nombreEl = cont.querySelector('[data-field="nombre"]');
+        const tipoEl = cont.querySelector('[data-field="tipo"]');
+        const descItem = cont.querySelector('[data-field="descripcion"]');
+
+        const nombre = nombreEl?.textContent?.trim() || "";
+        const tipo = tipoEl?.textContent?.trim().toLowerCase() || "";
+        const desc = descItem?.querySelector("p")?.textContent?.trim()
+            || descItem?.querySelector("span")?.textContent?.trim()
+            || "";
+
+        // Rellenar campos del modal con valores actuales
+        const nombreInput = modal.querySelector("#nombreGrupo");
+        const tipoSelect = modal.querySelector("#tipoGrupo");
+        const descTextarea = modal.querySelector("#descripcionGrupo");
+
+        if (nombreInput) nombreInput.value = nombre;
+        if (tipoSelect && tipo) tipoSelect.value = tipo; // familiar/laboral/personal
+        if (descTextarea) descTextarea.value = desc;
+    });
+}
+
+
+function crearTareaConModal() {
+    document.addEventListener("submit", async (e) => {
         const form = e.target;
         if (!form || form.id !== "formCrearTarea") return;
 
@@ -139,80 +250,85 @@ function crearTareaConModal() {
         const modal = document.getElementById("crearTareaModal");
         const formData = new FormData(form);
 
-        fetch(form.action, { method: "POST", body: formData })
-            .then(res => res.json())
-            .then(data => {
-                if (!data.success) {
-                    alert(data.error || "Error al crear tarea.");
-                    return;
-                }
+        try {
+            const res = await fetch(form.action, { method: "POST", body: formData });
+            const raw = await res.text();
+            let data;
+            try {
+                data = JSON.parse(raw);
+            } catch {
+                console.error("Respuesta no JSON:", raw);
+                mostrarAlerta(`❌ Respuesta no válida del servidor (HTTP ${res.status}).`, "danger");
+                return;
+            }
+            if (!res.ok || !data.success) {
+                const errorMsg = data?.error || `HTTP ${res.status}`;
+                mostrarAlerta(`❌ Error al crear tarea: ${errorMsg}`, "danger");
+                return;
+            }
 
-                // Eliminar mensaje vacío si existe
-                const noTasksMsg = document.querySelector("#task-list .list-group-item");
-                if (noTasksMsg && noTasksMsg.textContent.includes("No hay tareas pendientes")) {
-                    noTasksMsg.remove();
-                }
+            // Eliminar placeholder si existe
+            const noTasksMsg = document.querySelector("#task-list .list-group-item");
+            if (noTasksMsg && noTasksMsg.textContent.includes("No hay tareas pendientes")) {
+                noTasksMsg.remove();
+            }
 
-                // Insertar <li> con los mismos botones que PHP
-                const nuevoLi = document.createElement("li");
-                nuevoLi.className = "list-group-item d-flex justify-content-between align-items-start flex-column flex-md-row";
-                nuevoLi.innerHTML = `
-  <div>
-    <strong>${data.titulo}</strong> - ${data.puntos} pts<br>
-    <small>${data.descripcion}</small><br>
-    <small class="text-muted">Fecha límite: ${data.fecha_limite}</small><br>
-    <small class="text-muted">Asignado a: ${data.asignado || 'Sin asignar'}</small>
-  </div>
-  <div class="task-actions mt-2 mt-md-0">
-    <button class="btn btn-sm btn-outline-primary admin-only me-1" 
-            data-bs-toggle="modal" data-bs-target="#editarTareaModal"
-            data-id="${data.id_tarea}" data-titulo="${data.titulo}"
-            data-descripcion="${data.descripcion}" data-puntos="${data.puntos}"
-            data-fecha="${data.fecha_limite}" data-asignado="${data.asignado}" 
-            title="Modificar">
-      <i class="bi bi-pencil-square"></i>
-    </button>
-    <button class="btn btn-sm btn-outline-danger admin-only" 
-            data-bs-toggle="modal" data-bs-target="#eliminarTareaModal"
-            data-id="${data.id_tarea}" data-titulo="${data.titulo}" 
-            title="Eliminar">
-      <i class="bi bi-trash"></i>
-    </button>
-    <button class="btn btn-sm btn-outline-success complete-task-btn"
-            data-id="${data.id_tarea}" title="Completada">
-      <i class="bi bi-check-circle"></i>
-    </button>
-  </div>
+            const asignadoNombre = data.asignado || "Sin asignar";
+            const asignadoId = data.asignado_id || "";
+
+            const nuevoLi = document.createElement("li");
+            nuevoLi.className = "list-group-item d-flex justify-content-between align-items-start flex-column flex-md-row";
+            nuevoLi.innerHTML = `
+          <div>
+            <strong>${data.titulo}</strong> - ${data.puntos} pts<br>
+            <small>${data.descripcion}</small><br>
+            <small class="text-muted">Fecha límite: ${data.fecha_limite}</small><br>
+            <small class="text-muted">Asignado a: ${asignadoNombre}</small>
+          </div>
+          <div class="task-actions mt-2 mt-md-0">
+            <button class="btn btn-sm btn-outline-primary admin-only me-1"
+                    data-bs-toggle="modal" data-bs-target="#editarTareaModal"
+                    data-id="${data.id_tarea}" data-titulo="${data.titulo}"
+                    data-descripcion="${data.descripcion}" data-puntos="${data.puntos}"
+                    data-fecha="${data.fecha_limite}" data-asignado="${asignadoNombre}"
+                    data-asignado-id="${asignadoId}"
+                    title="Modificar" aria-label="Modificar tarea ${data.titulo}">
+              <i class="bi bi-pencil-square"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger admin-only"
+                    data-bs-toggle="modal" data-bs-target="#eliminarTareaModal"
+                    data-id="${data.id_tarea}" data-titulo="${data.titulo}"
+                    title="Eliminar" aria-label="Eliminar tarea ${data.titulo}">
+              <i class="bi bi-trash"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-success complete-task-btn"
+                    data-id="${data.id_tarea}" title="Completada" aria-label="Marcar completada ${data.titulo}">
+              <i class="bi bi-check-circle"></i>
+            </button>
+          </div>
         `;
-                document.getElementById("task-list").prepend(nuevoLi);
-                asegurarMensajeVacio("task-list", "tasks-empty-placeholder", "No hay tareas pendientes en este grupo.");
+            document.getElementById("task-list").prepend(nuevoLi);
+            asegurarMensajeVacio("task-list", "tasks-empty-placeholder", "No hay tareas pendientes en este grupo.");
 
-                // Cerrar modal y resetear form
-                const bsModal = bootstrap.Modal.getInstance(modal);
-                if (bsModal) bsModal.hide();
-                form.reset();
+            // Cerrar modal y resetear form
+            const bsModal = bootstrap.Modal.getInstance(modal);
+            if (bsModal) bsModal.hide();
+            form.reset();
 
-                // Activar sección Tareas
-                document.querySelectorAll(".sidebar-menu .menu-item").forEach(i => i.classList.remove("active"));
-                document.querySelectorAll(".content-section").forEach(s => s.classList.remove("active"));
-                const tareasItem = document.querySelector('.sidebar-menu .menu-item[data-section="tareas"]');
-                const tareasSection = document.getElementById("tareas-section");
-                if (tareasItem) tareasItem.classList.add("active");
-                if (tareasSection) tareasSection.classList.add("active");
+            // Activar sección Tareas
+            document.querySelectorAll(".sidebar-menu .menu-item").forEach(i => i.classList.remove("active"));
+            document.querySelectorAll(".content-section").forEach(s => s.classList.remove("active"));
+            const tareasItem = document.querySelector('.sidebar-menu .menu-item[data-section="tareas"]');
+            const tareasSection = document.getElementById("tareas-section");
+            if (tareasItem) tareasItem.classList.add("active");
+            if (tareasSection) tareasSection.classList.add("active");
 
-                // Alerta de éxito
-                const alertContainer = document.querySelector(".container.mt-4");
-                if (alertContainer) {
-                    alertContainer.innerHTML = `
-  <div class="alert alert-success alert-dismissible fade show" role="alert">
-    ✅ Tarea creada con éxito.
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-  </div>`;
-                }
-            })
-            .catch(err => console.error("Error:", err));
+            mostrarAlerta("✅ Tarea creada con éxito.", "success");
+        } catch (err) {
+            console.error("Error en crearTareaConModal:", err);
+            mostrarAlerta("❌ Error inesperado al crear tarea.", "danger");
+        }
     });
-
 }
 
 function eliminarTareaConModal() {
@@ -294,60 +410,66 @@ function editarTareaConModal() {
     const modal = document.getElementById("editarTareaModal");
     if (!form) return;
 
-    form.addEventListener("submit", (e) => {
+    form.addEventListener("submit", async (e) => {
         e.preventDefault();
-
         const formData = new FormData(form);
 
-        fetch(form.action, { method: "POST", body: formData })
-            .then(res => res.json())
-            .then(data => {
-                if (!data.success) {
-                    alert(data.error || "Error al editar tarea.");
-                    return;
-                }
+        try {
+            const res = await fetch(form.action, { method: "POST", body: formData });
+            const raw = await res.text();
+            let data;
+            try {
+                data = JSON.parse(raw);
+            } catch {
+                console.error("Respuesta no JSON:", raw);
+                mostrarAlerta(`❌ Respuesta no válida del servidor (HTTP ${res.status}).`, "danger");
+                return;
+            }
+            if (!res.ok || !data.success) {
+                const errorMsg = data?.error || `HTTP ${res.status}`;
+                mostrarAlerta(`❌ Error al editar tarea: ${errorMsg}`, "danger");
+                return;
+            }
 
-                // Encontrar el <li> de la tarea por cualquier botón con data-id=id_tarea
-                const actionBtn = document.querySelector(`#task-list .task-actions [data-id="${data.id_tarea}"]`);
-                const li = actionBtn ? actionBtn.closest("li") : null;
-                if (!li) return;
+            // Encontrar el <li> por cualquier botón con data-id=id_tarea
+            const actionBtn = document.querySelector(`#task-list .task-actions [data-id="${data.id_tarea}"]`);
+            const li = actionBtn ? actionBtn.closest("li") : null;
+            if (!li) {
+                mostrarAlerta("❌ No se encontró la tarjeta de la tarea para actualizar.", "danger");
+                return;
+            }
 
-                // Actualizar bloque de información
-                const left = li.querySelector("div:first-child");
-                if (left) {
-                    left.innerHTML = `
-  <strong>${data.titulo}</strong> - ${data.puntos} pts<br>
-  <small>${data.descripcion}</small><br>
-  <small class="text-muted">Fecha límite: ${data.fecha_limite}</small><br>
-  <small class="text-muted">Asignado a: ${data.asignado || 'Sin asignar'}</small>
-            `;
-                }
+            const asignadoNombre = data.asignado || "Sin asignar";
+            const left = li.querySelector("div:first-child");
+            if (left) {
+                left.innerHTML = `
+            <strong>${data.titulo}</strong> - ${data.puntos} pts<br>
+            <small>${data.descripcion}</small><br>
+            <small class="text-muted">Fecha límite: ${data.fecha_limite}</small><br>
+            <small class="text-muted">Asignado a: ${asignadoNombre}</small>
+          `;
+            }
 
-                // Refrescar data-* en los botones de acción
-                li.querySelectorAll(".task-actions [data-id]").forEach(btn => {
-                    btn.setAttribute("data-titulo", data.titulo);
-                    btn.setAttribute("data-descripcion", data.descripcion);
-                    btn.setAttribute("data-puntos", data.puntos);
-                    btn.setAttribute("data-fecha", data.fecha_limite);
-                    btn.setAttribute("data-asignado", data.asignado || '');
-                });
+            // Refrescar data-* en los botones de acción, incluyendo data-asignado-id
+            const asignadoId = data.asignado_id || "";
+            li.querySelectorAll(".task-actions [data-id]").forEach(btn => {
+                btn.setAttribute("data-titulo", data.titulo);
+                btn.setAttribute("data-descripcion", data.descripcion);
+                btn.setAttribute("data-puntos", data.puntos);
+                btn.setAttribute("data-fecha", data.fecha_limite);
+                btn.setAttribute("data-asignado", asignadoNombre || "");
+                btn.setAttribute("data-asignado-id", asignadoId);
+            });
 
-                // Cerrar modal y resetear
-                const bsModal = bootstrap.Modal.getInstance(modal);
-                if (bsModal) bsModal.hide();
-                form.reset();
+            const bsModal = bootstrap.Modal.getInstance(modal);
+            if (bsModal) bsModal.hide();
+            form.reset();
 
-                // Alerta
-                const alertContainer = document.querySelector(".container.mt-4");
-                if (alertContainer) {
-                    alertContainer.innerHTML = `
-  <div class="alert alert-info alert-dismissible fade show" role="alert">
-    ✏️ Tarea editada con éxito.
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-  </div>`;
-                }
-            })
-            .catch(err => console.error("Error:", err));
+            mostrarAlerta("✏️ Tarea editada con éxito.", "info");
+        } catch (err) {
+            console.error("Error en editarTareaConModal:", err);
+            mostrarAlerta("❌ Error inesperado al editar tarea.", "danger");
+        }
     });
 }
 
@@ -365,11 +487,15 @@ function configurarModalEditarTarea() {
         document.getElementById("editPuntos").value = button.getAttribute("data-puntos");
         document.getElementById("editFecha").value = button.getAttribute("data-fecha");
 
-        // Seleccionar el asignado por ID
-        const asignadoId = button.getAttribute("data-asignado-id");
+        const asignadoId = button.getAttribute("data-asignado-id") || "";
         const select = document.getElementById("editAsignado");
-        if (select && asignadoId) {
+        if (select) {
+            // Si asignadoId vacío, seleccionar opción '' (Ninguno)
             [...select.options].forEach(opt => { opt.selected = (opt.value === asignadoId); });
+            if (!asignadoId) {
+                const none = select.querySelector('option[value=""]');
+                if (none) none.selected = true;
+            }
         }
     });
 }
@@ -396,17 +522,17 @@ function configurarBotonCompletarTarea() {
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: `id_tarea=${encodeURIComponent(idTarea)}&id_grupo=${encodeURIComponent(idGrupo)}`
         })
-        .then(res => res.json())
-        .then(data => {
-            console.log("Respuesta completar_tarea:", data);
-            if (data.success) {
-                // refrescar lista sin recargar toda la página
-                refrescarTodoConBoton();
-            } else {
-                alert(data.error || "Error al completar tarea");
-            }
-        })
-        .catch(err => console.error("Error al completar tarea:", err));
+            .then(res => res.json())
+            .then(data => {
+                console.log("Respuesta completar_tarea:", data);
+                if (data.success) {
+                    // refrescar lista sin recargar toda la página
+                    refrescarTodoConBoton();
+                } else {
+                    alert(data.error || "Error al completar tarea");
+                }
+            })
+            .catch(err => console.error("Error al completar tarea:", err));
     });
 }
 function configurarBotonesAprobarRechazar() {
@@ -425,12 +551,12 @@ function configurarBotonesAprobarRechazar() {
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: `id_tarea=${encodeURIComponent(idTarea)}&id_grupo=${encodeURIComponent(idGrupo)}`
             })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) refrescarTodoConBoton();
-                else alert(data.error || "Error al aprobar tarea");
-            })
-            .catch(err => console.error("Error al aprobar tarea:", err));
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) refrescarTodoConBoton();
+                    else alert(data.error || "Error al aprobar tarea");
+                })
+                .catch(err => console.error("Error al aprobar tarea:", err));
         }
 
         if (rejectBtn) {
@@ -440,12 +566,12 @@ function configurarBotonesAprobarRechazar() {
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: `id_tarea=${encodeURIComponent(idTarea)}&id_grupo=${encodeURIComponent(idGrupo)}`
             })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) refrescarTodoConBoton();
-                else alert(data.error || "Error al rechazar tarea");
-            })
-            .catch(err => console.error("Error al rechazar tarea:", err));
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) refrescarTodoConBoton();
+                    else alert(data.error || "Error al rechazar tarea");
+                })
+                .catch(err => console.error("Error al rechazar tarea:", err));
         }
     });
 }
@@ -471,17 +597,14 @@ function configurarBotonCopiarCodigo() {
     const btn = document.getElementById("btnCopiarCodigo");
     if (!btn) return;
 
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
         const codigo = btn.getAttribute("data-codigo");
-        navigator.clipboard.writeText(codigo).then(() => {
-            const toastEl = document.getElementById("copiadoToast");
-            if (toastEl) {
-                const toast = new bootstrap.Toast(toastEl);
-                toast.show();
-            }
-        }).catch(err => {
-            console.error("Error al copiar:", err);
-        });
+        try {
+            await navigator.clipboard.writeText(codigo);
+            mostrarAlerta("🔗 Código copiado al portapapeles", "success");
+        } catch {
+            mostrarAlerta("❌ No se pudo copiar el código", "danger");
+        }
     });
 }
 
@@ -522,6 +645,7 @@ function renderizarMiembros(miembros, isAdmin) {
         lista.appendChild(li);
     });
 }
+
 function renderizarTareas(tareas, isAdmin) {
     const lista = document.getElementById("task-list");
     if (!lista) return;
@@ -549,6 +673,7 @@ function renderizarTareas(tareas, isAdmin) {
                     data-id="${t.id_tarea}" data-titulo="${t.titulo}"
                     data-descripcion="${t.descripcion}" data-puntos="${t.puntos}"
                     data-fecha="${t.fecha_limite}" data-asignado="${t.asignado || ''}"
+                    data-asignado-id="${t.asignado_id || ''}"
                     title="Modificar">
                     <i class="bi bi-pencil-square"></i>
                 </button>
@@ -1181,15 +1306,79 @@ function refrescarTodoConBoton() {
     tick();
 }
 
+function cargarConfiguracion() {
+    const grupoId = new URLSearchParams(window.location.search).get("id");
+    if (!grupoId) return;
 
+    fetch(`../configuracion/configuracion.php?id=${grupoId}`)
+        .then(res => res.json())
+        .then(data => {
+            const cont = document.getElementById("configuracion-container");
+            if (!cont) return;
 
+            if (!data.success) {
+                cont.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+                return;
+            }
 
+            const tipoBonito = data.tipo ? (data.tipo[0].toUpperCase() + data.tipo.slice(1)) : "";
+            const expulsados = typeof data.expulsados === "number" ? data.expulsados : 0;
+            const desc = (data.descripcion || "").trim();
 
+            cont.innerHTML = `
+          <div class="config-header d-flex align-items-center justify-content-between flex-wrap">
+            <div>
+              <h4 class="mb-1 d-flex align-items-center gap-2">
+                <i class="bi bi-info-circle"></i> Información del grupo
+              </h4>
+              <div class="d-flex align-items-center gap-2">
+                <span class="config-name" data-field="nombre">${data.nombre}</span>
+                <span class="badge rounded-pill config-badge" data-field="tipo">${tipoBonito}</span>
+              </div>
+            </div>
+            <div class="config-stats d-flex align-items-center gap-2">
+              <span class="stat-badge">
+                <i class="bi bi-people"></i> Activos: <strong data-field="miembros">${data.miembros}</strong>
+              </span>
+              <span class="stat-badge stat-muted">
+                <i class="bi bi-person-x"></i> Expulsados: <strong>${expulsados}</strong>
+              </span>
+            </div>
+          </div>
+  
+          ${desc ? `
+          <div class="config-description mt-3" data-field="descripcion">
+            <h6 class="text-muted mb-2">Descripción</h6>
+            <p class="mb-0">${desc}</p>
+          </div>` : ""}
+  
+          <div class="config-actions-footer mt-3">
+            <div class="row g-2">
+              <div class="col-12 col-md-4">
+                <button id="btnCopiarCodigo" class="btn btn-outline-secondary w-100" data-codigo="${data.codigo}">
+                  <i class="bi bi-link-45deg"></i> Copiar código
+                </button>
+              </div>
+              <div class="col-6 col-md-4">
+                <button class="btn btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#editarGrupoModal">
+                  <i class="bi bi-pencil-square"></i> Editar grupo
+                </button>
+              </div>
+              <div class="col-6 col-md-4">
+                <button class="btn btn-outline-danger w-100" data-bs-toggle="modal" data-bs-target="#eliminarGrupoModal">
+                  <i class="bi bi-trash"></i> Eliminar grupo
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
 
-
-
-
-
-
-
+            configurarBotonCopiarCodigo();
+        })
+        .catch(err => {
+            console.error("Error al cargar configuración:", err);
+            const cont = document.getElementById("configuracion-container");
+            if (cont) cont.innerHTML = `<div class="alert alert-danger">Error al cargar configuración</div>`;
+        });
+}
 

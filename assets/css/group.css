@@ -19,8 +19,8 @@
   padding-right: 0;
 }
 
-.sidebar.collapsed ~ .main-content,
-.sidebar.collapsed + .main-content {
+.sidebar.collapsed~.main-content,
+.sidebar.collapsed+.main-content {
   margin-left: 72px;
 }
 
@@ -41,7 +41,9 @@
     margin-left: 0;
   }
 
-  .dashboard-header { padding: 16px; }
+  .dashboard-header {
+    padding: 16px;
+  }
 }
 
 /* Lista de items */
@@ -65,7 +67,9 @@
 }
 
 .task-actions button:hover,
-.remove-member-btn:hover { opacity: 0.7; }
+.remove-member-btn:hover {
+  opacity: 0.7;
+}
 
 /* Botones dentro de card header */
 .card-header .btn-primary {
@@ -86,4 +90,46 @@
 
 .reward-actions button:hover {
   opacity: 0.7;
+}
+
+.config-title .config-name {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.config-badge {
+  background: rgba(13, 110, 253, .12);
+  color: #0d6efd;
+  border: 1px solid rgba(13, 110, 253, .25);
+}
+
+.config-stats .stat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .25rem .6rem;
+  border-radius: .6rem;
+  background: #f8f9fa;
+  border: 1px solid rgba(0, 0, 0, .08);
+  font-weight: 500;
+}
+
+.config-stats .stat-muted {
+  background: #f1f3f5;
+  color: #6c757d;
+}
+
+.config-desc-text {
+  margin-top: .35rem;
+  color: #495057;
+  white-space: pre-wrap;
+}
+
+.card-actions-footer {
+  padding-top: .75rem;
+  border-top: 1px solid rgba(0, 0, 0, .08);
+}
+
+.card-actions-footer .btn {
+  height: 44px;
 }

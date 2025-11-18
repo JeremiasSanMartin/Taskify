@@ -24,7 +24,7 @@ $grupos_propios = [];
 if ($userEmail) {
     $stmt = $conn->prepare("
         SELECT g.id_grupo, g.nombre, g.tipo,
-               (SELECT COUNT(*) FROM grupousuario WHERE grupo_id = g.id_grupo) AS miembros
+       (SELECT COUNT(*) FROM grupousuario WHERE grupo_id = g.id_grupo AND estado = 1) AS miembros
         FROM grupo g
         JOIN grupousuario gu ON gu.grupo_id = g.id_grupo
         JOIN usuario u ON gu.usuario_id = u.id_usuario
