@@ -241,8 +241,7 @@ function sincronizarModalEditarGrupo() {
 
 
 function crearTareaConModal() {
-
-    document.addEventListener("submit", (e) => {
+    document.addEventListener("submit", async (e) => {
         const form = e.target;
         if (!form || form.id !== "formCrearTarea") return;
 
@@ -251,80 +250,85 @@ function crearTareaConModal() {
         const modal = document.getElementById("crearTareaModal");
         const formData = new FormData(form);
 
-        fetch(form.action, { method: "POST", body: formData })
-            .then(res => res.json())
-            .then(data => {
-                if (!data.success) {
-                    alert(data.error || "Error al crear tarea.");
-                    return;
-                }
+        try {
+            const res = await fetch(form.action, { method: "POST", body: formData });
+            const raw = await res.text();
+            let data;
+            try {
+                data = JSON.parse(raw);
+            } catch {
+                console.error("Respuesta no JSON:", raw);
+                mostrarAlerta(`❌ Respuesta no válida del servidor (HTTP ${res.status}).`, "danger");
+                return;
+            }
+            if (!res.ok || !data.success) {
+                const errorMsg = data?.error || `HTTP ${res.status}`;
+                mostrarAlerta(`❌ Error al crear tarea: ${errorMsg}`, "danger");
+                return;
+            }
 
-                // Eliminar mensaje vacío si existe
-                const noTasksMsg = document.querySelector("#task-list .list-group-item");
-                if (noTasksMsg && noTasksMsg.textContent.includes("No hay tareas pendientes")) {
-                    noTasksMsg.remove();
-                }
+            // Eliminar placeholder si existe
+            const noTasksMsg = document.querySelector("#task-list .list-group-item");
+            if (noTasksMsg && noTasksMsg.textContent.includes("No hay tareas pendientes")) {
+                noTasksMsg.remove();
+            }
 
-                // Insertar <li> con los mismos botones que PHP
-                const nuevoLi = document.createElement("li");
-                nuevoLi.className = "list-group-item d-flex justify-content-between align-items-start flex-column flex-md-row";
-                nuevoLi.innerHTML = `
-  <div>
-    <strong>${data.titulo}</strong> - ${data.puntos} pts<br>
-    <small>${data.descripcion}</small><br>
-    <small class="text-muted">Fecha límite: ${data.fecha_limite}</small><br>
-    <small class="text-muted">Asignado a: ${data.asignado || 'Sin asignar'}</small>
-  </div>
-  <div class="task-actions mt-2 mt-md-0">
-    <button class="btn btn-sm btn-outline-primary admin-only me-1" 
-            data-bs-toggle="modal" data-bs-target="#editarTareaModal"
-            data-id="${data.id_tarea}" data-titulo="${data.titulo}"
-            data-descripcion="${data.descripcion}" data-puntos="${data.puntos}"
-            data-fecha="${data.fecha_limite}" data-asignado="${data.asignado}" 
-            title="Modificar">
-      <i class="bi bi-pencil-square"></i>
-    </button>
-    <button class="btn btn-sm btn-outline-danger admin-only" 
-            data-bs-toggle="modal" data-bs-target="#eliminarTareaModal"
-            data-id="${data.id_tarea}" data-titulo="${data.titulo}" 
-            title="Eliminar">
-      <i class="bi bi-trash"></i>
-    </button>
-    <button class="btn btn-sm btn-outline-success complete-task-btn"
-            data-id="${data.id_tarea}" title="Completada">
-      <i class="bi bi-check-circle"></i>
-    </button>
-  </div>
+            const asignadoNombre = data.asignado || "Sin asignar";
+            const asignadoId = data.asignado_id || "";
+
+            const nuevoLi = document.createElement("li");
+            nuevoLi.className = "list-group-item d-flex justify-content-between align-items-start flex-column flex-md-row";
+            nuevoLi.innerHTML = `
+          <div>
+            <strong>${data.titulo}</strong> - ${data.puntos} pts<br>
+            <small>${data.descripcion}</small><br>
+            <small class="text-muted">Fecha límite: ${data.fecha_limite}</small><br>
+            <small class="text-muted">Asignado a: ${asignadoNombre}</small>
+          </div>
+          <div class="task-actions mt-2 mt-md-0">
+            <button class="btn btn-sm btn-outline-primary admin-only me-1"
+                    data-bs-toggle="modal" data-bs-target="#editarTareaModal"
+                    data-id="${data.id_tarea}" data-titulo="${data.titulo}"
+                    data-descripcion="${data.descripcion}" data-puntos="${data.puntos}"
+                    data-fecha="${data.fecha_limite}" data-asignado="${asignadoNombre}"
+                    data-asignado-id="${asignadoId}"
+                    title="Modificar" aria-label="Modificar tarea ${data.titulo}">
+              <i class="bi bi-pencil-square"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger admin-only"
+                    data-bs-toggle="modal" data-bs-target="#eliminarTareaModal"
+                    data-id="${data.id_tarea}" data-titulo="${data.titulo}"
+                    title="Eliminar" aria-label="Eliminar tarea ${data.titulo}">
+              <i class="bi bi-trash"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-success complete-task-btn"
+                    data-id="${data.id_tarea}" title="Completada" aria-label="Marcar completada ${data.titulo}">
+              <i class="bi bi-check-circle"></i>
+            </button>
+          </div>
         `;
-                document.getElementById("task-list").prepend(nuevoLi);
-                asegurarMensajeVacio("task-list", "tasks-empty-placeholder", "No hay tareas pendientes en este grupo.");
+            document.getElementById("task-list").prepend(nuevoLi);
+            asegurarMensajeVacio("task-list", "tasks-empty-placeholder", "No hay tareas pendientes en este grupo.");
 
-                // Cerrar modal y resetear form
-                const bsModal = bootstrap.Modal.getInstance(modal);
-                if (bsModal) bsModal.hide();
-                form.reset();
+            // Cerrar modal y resetear form
+            const bsModal = bootstrap.Modal.getInstance(modal);
+            if (bsModal) bsModal.hide();
+            form.reset();
 
-                // Activar sección Tareas
-                document.querySelectorAll(".sidebar-menu .menu-item").forEach(i => i.classList.remove("active"));
-                document.querySelectorAll(".content-section").forEach(s => s.classList.remove("active"));
-                const tareasItem = document.querySelector('.sidebar-menu .menu-item[data-section="tareas"]');
-                const tareasSection = document.getElementById("tareas-section");
-                if (tareasItem) tareasItem.classList.add("active");
-                if (tareasSection) tareasSection.classList.add("active");
+            // Activar sección Tareas
+            document.querySelectorAll(".sidebar-menu .menu-item").forEach(i => i.classList.remove("active"));
+            document.querySelectorAll(".content-section").forEach(s => s.classList.remove("active"));
+            const tareasItem = document.querySelector('.sidebar-menu .menu-item[data-section="tareas"]');
+            const tareasSection = document.getElementById("tareas-section");
+            if (tareasItem) tareasItem.classList.add("active");
+            if (tareasSection) tareasSection.classList.add("active");
 
-                // Alerta de éxito
-                const alertContainer = document.querySelector(".container.mt-4");
-                if (alertContainer) {
-                    alertContainer.innerHTML = `
-  <div class="alert alert-success alert-dismissible fade show" role="alert">
-    ✅ Tarea creada con éxito.
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-  </div>`;
-                }
-            })
-            .catch(err => console.error("Error:", err));
+            mostrarAlerta("✅ Tarea creada con éxito.", "success");
+        } catch (err) {
+            console.error("Error en crearTareaConModal:", err);
+            mostrarAlerta("❌ Error inesperado al crear tarea.", "danger");
+        }
     });
-
 }
 
 function eliminarTareaConModal() {
@@ -406,60 +410,66 @@ function editarTareaConModal() {
     const modal = document.getElementById("editarTareaModal");
     if (!form) return;
 
-    form.addEventListener("submit", (e) => {
+    form.addEventListener("submit", async (e) => {
         e.preventDefault();
-
         const formData = new FormData(form);
 
-        fetch(form.action, { method: "POST", body: formData })
-            .then(res => res.json())
-            .then(data => {
-                if (!data.success) {
-                    alert(data.error || "Error al editar tarea.");
-                    return;
-                }
+        try {
+            const res = await fetch(form.action, { method: "POST", body: formData });
+            const raw = await res.text();
+            let data;
+            try {
+                data = JSON.parse(raw);
+            } catch {
+                console.error("Respuesta no JSON:", raw);
+                mostrarAlerta(`❌ Respuesta no válida del servidor (HTTP ${res.status}).`, "danger");
+                return;
+            }
+            if (!res.ok || !data.success) {
+                const errorMsg = data?.error || `HTTP ${res.status}`;
+                mostrarAlerta(`❌ Error al editar tarea: ${errorMsg}`, "danger");
+                return;
+            }
 
-                // Encontrar el <li> de la tarea por cualquier botón con data-id=id_tarea
-                const actionBtn = document.querySelector(`#task-list .task-actions [data-id="${data.id_tarea}"]`);
-                const li = actionBtn ? actionBtn.closest("li") : null;
-                if (!li) return;
+            // Encontrar el <li> por cualquier botón con data-id=id_tarea
+            const actionBtn = document.querySelector(`#task-list .task-actions [data-id="${data.id_tarea}"]`);
+            const li = actionBtn ? actionBtn.closest("li") : null;
+            if (!li) {
+                mostrarAlerta("❌ No se encontró la tarjeta de la tarea para actualizar.", "danger");
+                return;
+            }
 
-                // Actualizar bloque de información
-                const left = li.querySelector("div:first-child");
-                if (left) {
-                    left.innerHTML = `
-  <strong>${data.titulo}</strong> - ${data.puntos} pts<br>
-  <small>${data.descripcion}</small><br>
-  <small class="text-muted">Fecha límite: ${data.fecha_limite}</small><br>
-  <small class="text-muted">Asignado a: ${data.asignado || 'Sin asignar'}</small>
-            `;
-                }
+            const asignadoNombre = data.asignado || "Sin asignar";
+            const left = li.querySelector("div:first-child");
+            if (left) {
+                left.innerHTML = `
+            <strong>${data.titulo}</strong> - ${data.puntos} pts<br>
+            <small>${data.descripcion}</small><br>
+            <small class="text-muted">Fecha límite: ${data.fecha_limite}</small><br>
+            <small class="text-muted">Asignado a: ${asignadoNombre}</small>
+          `;
+            }
 
-                // Refrescar data-* en los botones de acción
-                li.querySelectorAll(".task-actions [data-id]").forEach(btn => {
-                    btn.setAttribute("data-titulo", data.titulo);
-                    btn.setAttribute("data-descripcion", data.descripcion);
-                    btn.setAttribute("data-puntos", data.puntos);
-                    btn.setAttribute("data-fecha", data.fecha_limite);
-                    btn.setAttribute("data-asignado", data.asignado || '');
-                });
+            // Refrescar data-* en los botones de acción, incluyendo data-asignado-id
+            const asignadoId = data.asignado_id || "";
+            li.querySelectorAll(".task-actions [data-id]").forEach(btn => {
+                btn.setAttribute("data-titulo", data.titulo);
+                btn.setAttribute("data-descripcion", data.descripcion);
+                btn.setAttribute("data-puntos", data.puntos);
+                btn.setAttribute("data-fecha", data.fecha_limite);
+                btn.setAttribute("data-asignado", asignadoNombre || "");
+                btn.setAttribute("data-asignado-id", asignadoId);
+            });
 
-                // Cerrar modal y resetear
-                const bsModal = bootstrap.Modal.getInstance(modal);
-                if (bsModal) bsModal.hide();
-                form.reset();
+            const bsModal = bootstrap.Modal.getInstance(modal);
+            if (bsModal) bsModal.hide();
+            form.reset();
 
-                // Alerta
-                const alertContainer = document.querySelector(".container.mt-4");
-                if (alertContainer) {
-                    alertContainer.innerHTML = `
-  <div class="alert alert-info alert-dismissible fade show" role="alert">
-    ✏️ Tarea editada con éxito.
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-  </div>`;
-                }
-            })
-            .catch(err => console.error("Error:", err));
+            mostrarAlerta("✏️ Tarea editada con éxito.", "info");
+        } catch (err) {
+            console.error("Error en editarTareaConModal:", err);
+            mostrarAlerta("❌ Error inesperado al editar tarea.", "danger");
+        }
     });
 }
 
@@ -477,11 +487,15 @@ function configurarModalEditarTarea() {
         document.getElementById("editPuntos").value = button.getAttribute("data-puntos");
         document.getElementById("editFecha").value = button.getAttribute("data-fecha");
 
-        // Seleccionar el asignado por ID
-        const asignadoId = button.getAttribute("data-asignado-id");
+        const asignadoId = button.getAttribute("data-asignado-id") || "";
         const select = document.getElementById("editAsignado");
-        if (select && asignadoId) {
+        if (select) {
+            // Si asignadoId vacío, seleccionar opción '' (Ninguno)
             [...select.options].forEach(opt => { opt.selected = (opt.value === asignadoId); });
+            if (!asignadoId) {
+                const none = select.querySelector('option[value=""]');
+                if (none) none.selected = true;
+            }
         }
     });
 }
@@ -631,6 +645,7 @@ function renderizarMiembros(miembros, isAdmin) {
         lista.appendChild(li);
     });
 }
+
 function renderizarTareas(tareas, isAdmin) {
     const lista = document.getElementById("task-list");
     if (!lista) return;
@@ -658,6 +673,7 @@ function renderizarTareas(tareas, isAdmin) {
                     data-id="${t.id_tarea}" data-titulo="${t.titulo}"
                     data-descripcion="${t.descripcion}" data-puntos="${t.puntos}"
                     data-fecha="${t.fecha_limite}" data-asignado="${t.asignado || ''}"
+                    data-asignado-id="${t.asignado_id || ''}"
                     title="Modificar">
                     <i class="bi bi-pencil-square"></i>
                 </button>

@@ -51,6 +51,17 @@ if (!$grupo) {
     exit();
 }
 
+// Miembros activos del grupo (incluye rol para excluir admin en el select)
+$stmt = $conn->prepare("
+    SELECT u.id_usuario, u.nombre, gu.rol
+    FROM grupousuario gu
+    JOIN usuario u ON gu.usuario_id = u.id_usuario
+    WHERE gu.grupo_id = :gid AND gu.estado = 1
+    ORDER BY u.nombre ASC
+");
+$stmt->execute([':gid' => $id_grupo]);
+$miembros = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 // Cantidad de miembros
 $stmt = $conn->prepare("SELECT COUNT(*) FROM grupousuario WHERE grupo_id = :id AND estado = 1");
 $stmt->execute([':id' => $id_grupo]);
@@ -411,13 +422,13 @@ $userEmail = htmlspecialchars($_SESSION['email']);
                     <div class="mb-3">
                         <label for="asignadoA" class="form-label">Asignar a</label>
                         <select class="form-select" id="asignadoA" name="asignadoA" required>
-                            <option value="">Seleccionar miembro</option>
+                            <option value="" selected disabled>Seleccione un miembro</option>
+                            <option value="0">Sin asignar</option>
                             <?php foreach ($miembros as $miembro): ?>
-                                <?php if ($miembro['rol'] !== 'administrador'): ?>
-                                    <option value="<?= $miembro['id_usuario'] ?>">
-                                        <?= htmlspecialchars($miembro['nombre']) ?>
-                                    </option>
-                                <?php endif; ?>
+                                <option value="<?= $miembro['id_usuario'] ?>">
+                                    <?= htmlspecialchars($miembro['nombre']) ?>
+                                    <?= $miembro['rol'] === 'administrador' ? ' (Admin)' : '' ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -455,7 +466,7 @@ $userEmail = htmlspecialchars($_SESSION['email']);
     <!-- Modal Editar Tarea -->
     <div class="modal fade" id="editarTareaModal" tabindex="-1" aria-labelledby="editarTareaLabel" aria-hidden="true">
         <div class="modal-dialog">
-            <form id="formEditarTarea" action="../tarea/editar_tarea.php" method="POST" class="modal-content">
+            <form id="formEditarTarea" action="../tareas/editar_tarea.php" method="POST" class="modal-content">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title" id="editarTareaLabel">Editar tarea</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
@@ -488,13 +499,13 @@ $userEmail = htmlspecialchars($_SESSION['email']);
                     <div class="mb-3">
                         <label for="editAsignado" class="form-label">Asignado a</label>
                         <select class="form-select" id="editAsignado" name="asignadoA" required>
-                            <option value="">Seleccionar miembro</option>
+                            <option value="" selected disabled>Seleccione un miembro</option>
+                            <option value="0">Sin asignar</option>
                             <?php foreach ($miembros as $miembro): ?>
-                                <?php if ($miembro['rol'] !== 'administrador'): ?>
-                                    <option value="<?= $miembro['id_usuario'] ?>">
-                                        <?= htmlspecialchars($miembro['nombre']) ?>
-                                    </option>
-                                <?php endif; ?>
+                                <option value="<?= $miembro['id_usuario'] ?>">
+                                    <?= htmlspecialchars($miembro['nombre']) ?>
+                                    <?= $miembro['rol'] === 'administrador' ? ' (Admin)' : '' ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
