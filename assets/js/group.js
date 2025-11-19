@@ -652,11 +652,17 @@ function renderizarMiembros(miembros, isAdmin) {
     });
 }
 
-function renderizarTareas(tareas, isAdmin) {
+function renderizarTareas(tareas, isAdmin, usuarioId) {
     const lista = document.getElementById("task-list");
     if (!lista) return;
 
     lista.innerHTML = "";
+
+    // 🔹 Filtrar tareas si no es admin
+    if (!isAdmin) {
+        tareas = tareas.filter(t => !t.asignado_id || t.asignado_id === usuarioId);
+    }
+
     if (!tareas || tareas.length === 0) {
         lista.innerHTML = "<li class='list-group-item text-muted'>No hay tareas pendientes en este grupo.</li>";
         return;
@@ -706,6 +712,7 @@ function renderizarTareas(tareas, isAdmin) {
         lista.appendChild(li);
     });
 }
+
 
 function renderizarRecompensas(recompensas, isAdmin) {
     const lista = document.getElementById("reward-list");
@@ -757,7 +764,7 @@ function renderizarRecompensas(recompensas, isAdmin) {
                 <strong>${r.titulo}</strong> - ${r.costo} pts<br>
                 ${r.descripcion ? `<small class="text-muted">${r.descripcion}</small><br>` : ""}
                 ${r.disponibilidad > 0
-                ? `<small class="text-muted">Stock: ${r.disponibilidad}</small>`
+                ? `<small class="text-muted">Stock: <span class="stock-span">${r.disponibilidad}</span></small>`
                 : `<span class="badge bg-secondary">No disponible</span>`}
             </div>
             <div class="reward-actions">
@@ -1192,10 +1199,30 @@ function canjearRecompensa() {
                 const data = await resp.json();
 
                 if (data.success) {
-                    // actualizar stock y puntos...
+                    mostrarAlerta("✅ Recompensa canjeada con éxito", "success");
+
+                    // Actualizar stock visualmente
+                    const stockSpan = btn.closest("li").querySelector(".stock-span");
+                    if (stockSpan) {
+                        stockSpan.textContent = data.nuevo_stock;
+                    }
+
+                    // Actualizar puntos del colaborador
+                    const puntosSpan = document.getElementById("puntos-colaborador");
+                    if (puntosSpan) {
+                        puntosSpan.textContent = data.puntos_restantes;
+                    }
+
+                    // Opcional: deshabilitar el botón si stock llega a 0
+                    if (data.nuevo_stock <= 0) {
+                        btn.disabled = true;
+                        btn.innerHTML = `<i class="bi bi-cart-x"></i> Agotado`;
+                    }
                 } else {
                     mostrarAlerta("❌ " + (data.error || "No se pudo canjear la recompensa"), "danger");
                 }
+
+
             } catch (err) {
                 console.error("Error en canjearRecompensa:", err);
                 mostrarAlerta("❌ Error inesperado al canjear", "danger");
@@ -1288,7 +1315,7 @@ function refrescarTodoConBoton() {
 
                 // Pintar cada sección con sus datos
                 renderizarMiembros(data.miembros, data.isAdmin);
-                renderizarTareas(data.tareas, data.isAdmin);
+                renderizarTareas(data.tareas, data.isAdmin, data.usuarioId);
                 renderizarRecompensas(data.recompensas, data.isAdmin);
                 renderizarHistorial(data.historial);
                 renderizarAprobarTareas(data.tareas_realizadas);
@@ -1297,6 +1324,18 @@ function refrescarTodoConBoton() {
                 const puntosSpan = document.getElementById("puntos-colaborador");
                 if (puntosSpan) {
                     puntosSpan.textContent = data.puntos;
+                }
+
+                // 🔹 Actualizar badge de aprobar tareas en el sidebar
+                const badge = document.getElementById("badge-aprobar");
+                if (badge) {
+                    const pendientes = data.tareas_realizadas.length;
+                    if (data.isAdmin && pendientes > 0) {
+                        badge.textContent = pendientes;   // muestra número
+                        badge.classList.remove("d-none"); // lo hace visible
+                    } else {
+                        badge.classList.add("d-none");    // lo oculta
+                    }
                 }
             })
             .catch(err => console.error("Error refrescando grupo:", err));
@@ -1311,6 +1350,7 @@ function refrescarTodoConBoton() {
     // Si querés que cargue una vez al entrar:
     tick();
 }
+
 
 function cargarConfiguracionAdministrador() {
     const grupoId = new URLSearchParams(window.location.search).get("id");

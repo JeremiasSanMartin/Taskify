@@ -109,5 +109,6 @@ echo json_encode([
     'historial' => $historial,
     'recompensas' => $recompensas,
     'puntos' => $puntos_actuales,
-    'isAdmin' => $isAdmin
+    'isAdmin' => $isAdmin,
+    'usuarioId' => $usuario_id
 ]);

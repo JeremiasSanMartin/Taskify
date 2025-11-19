@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     WHERE usuario_id = :uid AND grupo_id = :gid
                 ");
                 $stmt->execute([':uid' => $usuario_id, ':gid' => $grupo_id]);
-            
+
                 header("Location: ver_grupo.php?id=$grupo_id");
                 exit();
             } else {
@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <head>
     <meta charset="UTF-8">
-    <title>Unirse a Grupo - TASKIFY</title>
+    <title>Taskify</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="../../assets/css/style.css" rel="stylesheet">
 </head>
@@ -87,6 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
 
                     <button type="submit" class="google-login-btn w-100">Unirme</button>
+                    <a class="google-login-btn w-100 mt-3" href="../../index.php" >Volver</a>
                 </form>
             </div>
         </div>
