@@ -81,7 +81,7 @@ $userEmail = htmlspecialchars($_SESSION['email']);
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Grupo - Taskify</title>
+    <title>Taskify</title>
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -114,13 +114,18 @@ $userEmail = htmlspecialchars($_SESSION['email']);
                 <i class="bi bi-arrow-left-circle"></i>
                 <span>Volver al Dashboard</span>
             </a>
-            <a href="#" class="menu-item" data-section="miembros">
+            <a href="#" class="menu-item active" data-section="miembros">
                 <i class="bi bi-people"></i>
                 <span>Miembros</span>
             </a>
             <a href="#" class="menu-item" data-section="tareas">
                 <i class="bi bi-list-check"></i>
                 <span>Tareas</span>
+            </a>
+            <a href="#" class="menu-item" data-section="aprobar-tareas">
+                <i class="bi bi-check2-square"></i>
+                <span>Aprobar Tareas</span>
+                <span id="badge-aprobar" class="badge bg-danger rounded-pill d-none">0</span>
             </a>
             <a href="#" class="menu-item" data-section="recompensas">
                 <i class="bi bi-gift-fill"></i>
@@ -129,10 +134,6 @@ $userEmail = htmlspecialchars($_SESSION['email']);
             <a href="#" class="menu-item" data-section="historial">
                 <i class="bi bi-clock-history"></i>
                 <span>Historial</span>
-            </a>
-            <a href="#" class="menu-item" data-section="aprobar-tareas">
-                <i class="bi bi-check2-square"></i>
-                <span>Aprobar Tareas</span>
             </a>
             <a href="#" class="menu-item" data-section="configuracion">
                 <i class="bi bi-gear-fill"></i>
