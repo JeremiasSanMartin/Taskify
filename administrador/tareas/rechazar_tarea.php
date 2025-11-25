@@ -30,7 +30,13 @@ if (!$guAdmin || $guAdmin['rol'] !== 'administrador') {
 }
 
 // datos de la tarea
-$stmt = $conn->prepare("SELECT asignadoA FROM tarea WHERE id_tarea = :tid AND grupo_id = :gid AND estado = 'realizada'");
+// datos de la tarea
+$stmt = $conn->prepare("SELECT asignadoA 
+                        FROM tarea 
+                        WHERE id_tarea = :tid 
+                          AND grupo_id = :gid 
+                          AND estado = 'realizada' 
+                          AND activa = 1");
 $stmt->execute([':tid' => $id_tarea, ':gid' => $id_grupo]);
 $tareaData = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -56,7 +62,11 @@ try {
     $conn->beginTransaction();
 
     // devolver a pendiente
-    $conn->prepare("UPDATE tarea SET estado = 'pendiente', fecha_entrega = NULL WHERE id_tarea = :tid AND grupo_id = :gid")
+    $conn->prepare("UPDATE tarea 
+                SET estado = 'pendiente', fecha_entrega = NULL 
+                WHERE id_tarea = :tid 
+                  AND grupo_id = :gid 
+                  AND activa = 1")
         ->execute([':tid' => $id_tarea, ':gid' => $id_grupo]);
 
     // historial del administrador (rechazó la tarea)

@@ -71,13 +71,7 @@ function mostrarSeccion(nombreSeccion) {
     if (nombreSeccion === "grupos") {
       titulo.textContent = "Mis Grupos";
       subtitulo.textContent = "Gestiona tus grupos y colaboraciones";
-    } else if (nombreSeccion === "notificaciones") {
-      titulo.textContent = "Notificaciones";
-      subtitulo.textContent = "Mantente al día con las últimas actualizaciones";
-    } else if (nombreSeccion === "recompensas") {
-      titulo.textContent = "Recompensas";
-      subtitulo.textContent = "Gestiona las recompensas de tu grupo";
-    }
+    } 
   }
 }
 

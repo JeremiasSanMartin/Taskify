@@ -78,13 +78,18 @@ try {
 
         echo json_encode(['success' => true, 'estado' => 'aprobada', 'id_tarea' => $id_tarea]);
     } else {
-        // Colaborador: marca como realizada
+        // Colaborador: marca como realizada y se asigna automáticamente
         $stmt = $conn->prepare("
             UPDATE tarea
-            SET estado = 'realizada', fecha_entrega = NOW()
+            SET estado = 'realizada', fecha_entrega = NOW(), asignadoA = :uid
             WHERE id_tarea = :tid AND grupo_id = :gid
         ");
-        $stmt->execute([':tid' => $id_tarea, ':gid' => $id_grupo]);
+        $stmt->execute([
+            ':uid' => $id_usuario,
+            ':tid' => $id_tarea,
+            ':gid' => $id_grupo
+        ]);
+
 
         // Insertar en historial con estadoTarea = 1 (realizada)
         $stmt = $conn->prepare("

@@ -40,10 +40,10 @@ if ($id_grupo && $titulo && $descripcion && is_numeric($puntos) && (int) $puntos
 
         $conn->beginTransaction();
 
-        // Insertar tarea (asignadoA puede ser NULL)
+        // Insertar tarea (asignadoA puede ser NULL, activa siempre en 1)
         $stmt = $conn->prepare("
-            INSERT INTO tarea (titulo, descripcion, puntos, estado, fecha_limite, asignadoA, grupo_id)
-            VALUES (:titulo, :descripcion, :puntos, 'pendiente', :fecha_limite, :asignadoA, :grupo_id)
+            INSERT INTO tarea (titulo, descripcion, puntos, estado, fecha_limite, asignadoA, grupo_id, activa)
+            VALUES (:titulo, :descripcion, :puntos, 'pendiente', :fecha_limite, :asignadoA, :grupo_id, 1)
         ");
         $stmt->execute([
             ':titulo' => $titulo,
@@ -53,6 +53,7 @@ if ($id_grupo && $titulo && $descripcion && is_numeric($puntos) && (int) $puntos
             ':asignadoA' => $asignadoA, // puede ser NULL
             ':grupo_id' => $id_grupo
         ]);
+
 
         $id_tarea = $conn->lastInsertId();
 

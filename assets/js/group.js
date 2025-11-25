@@ -663,7 +663,8 @@ function renderizarTareas(tareas, isAdmin, usuarioId) {
         tareas = tareas.filter(t => !t.asignado_id || t.asignado_id === usuarioId);
     }
 
-    if (!tareas || tareas.length === 0) {
+    // 🔹 Si no hay tareas, mostrar mensaje
+    if (!Array.isArray(tareas) || tareas.length === 0) {
         lista.innerHTML = "<li class='list-group-item text-muted'>No hay tareas pendientes en este grupo.</li>";
         return;
     }
@@ -714,24 +715,31 @@ function renderizarTareas(tareas, isAdmin, usuarioId) {
 }
 
 
+
 function renderizarRecompensas(recompensas, isAdmin) {
     const lista = document.getElementById("reward-list");
     if (!lista) return;
 
     lista.innerHTML = "";
-    if (!recompensas || recompensas.length === 0) {
+
+    // Normalizar: si no es array, convertir a vacío
+    if (!Array.isArray(recompensas)) {
+        recompensas = [];
+    }
+
+    // Filtrar recompensas visibles (descartar eliminadas)
+    const visibles = recompensas.filter(r => r.disponibilidad != -1);
+
+    if (visibles.length === 0) {
         lista.innerHTML = "<li class='list-group-item text-muted'>No hay recompensas disponibles.</li>";
         return;
     }
 
-    recompensas.forEach(r => {
-        if (r.disponibilidad == -1) return; // ocultar eliminadas
-
+    visibles.forEach(r => {
         const li = document.createElement("li");
         li.className = `list-group-item d-flex justify-content-between align-items-start flex-column flex-md-row ${r.disponibilidad == 0 ? 'text-muted bg-light' : ''}`;
         li.dataset.id = r.id_recompensa;
 
-        // Bloque de acciones según rol
         let acciones = "";
         if (isAdmin) {
             acciones = `
@@ -764,8 +772,8 @@ function renderizarRecompensas(recompensas, isAdmin) {
                 <strong>${r.titulo}</strong> - ${r.costo} pts<br>
                 ${r.descripcion ? `<small class="text-muted">${r.descripcion}</small><br>` : ""}
                 ${r.disponibilidad > 0
-                ? `<small class="text-muted">Stock: <span class="stock-span">${r.disponibilidad}</span></small>`
-                : `<span class="badge bg-secondary">No disponible</span>`}
+                    ? `<small class="text-muted">Stock: <span class="stock-span">${r.disponibilidad}</span></small>`
+                    : `<span class="badge bg-secondary">No disponible</span>`}
             </div>
             <div class="reward-actions">
                 ${acciones}
@@ -774,6 +782,8 @@ function renderizarRecompensas(recompensas, isAdmin) {
         lista.appendChild(li);
     });
 }
+
+
 
 function renderizarHistorial(historial) {
     const contenedor = document.getElementById("historial-list");
@@ -1002,7 +1012,9 @@ function eliminarRecompensa() {
                 const data = await resp.json();
 
                 if (data.success) {
-                    const li = document.querySelector(`#reward-list li[data-id="${data.id_recompensa}"]`);
+                    const list = document.getElementById("reward-list");
+                    const li = list.querySelector(`li[data-id="${data.id_recompensa}"]`);
+
                     if (li) {
                         if (data.disponibilidad === -1) {
                             // eliminada definitivamente → remover del DOM
@@ -1032,9 +1044,14 @@ function eliminarRecompensa() {
                         }
                     }
 
+                    // 👉 si la lista quedó vacía, mostrar mensaje
+                    if (list && list.children.length === 0) {
+                        list.innerHTML = "<li class='list-group-item text-muted'>No hay recompensas disponibles.</li>";
+                    }
+
                     // cerrar modal
                     const modal = bootstrap.Modal.getInstance(document.getElementById("modalEliminarRecompensa"));
-                    modal.hide();
+                    if (modal) modal.hide();
 
                     mostrarAlerta("✅ Recompensa eliminada correctamente", "success");
                 } else {
@@ -1046,6 +1063,7 @@ function eliminarRecompensa() {
         });
     }
 }
+
 
 
 
@@ -1078,8 +1096,8 @@ function crearRecompensa() {
                         <strong>${data.titulo}</strong> - <span class="points">${data.costo} pts</span>
                         ${data.descripcion ? `<br><small class="text-muted">${data.descripcion}</small>` : ""}
                         ${data.disponibilidad > 0
-                        ? `<br><small class="text-muted">Stock: ${data.disponibilidad}</small>`
-                        : `<br><span class="badge bg-secondary">No disponible</span>`}
+                            ? `<br><small class="text-muted">Stock: ${data.disponibilidad}</small>`
+                            : `<br><span class="badge bg-secondary">No disponible</span>`}
                     </div>
                     <div class="reward-actions">
                         <button
@@ -1111,7 +1129,13 @@ function crearRecompensa() {
 
                 // Insertar al inicio del listado
                 const list = document.getElementById("reward-list");
-                if (list) list.prepend(li);
+                if (list) {
+                    // Si el único hijo es el mensaje de "no hay recompensas", lo borramos
+                    if (list.children.length === 1 && list.children[0].classList.contains("text-muted")) {
+                        list.innerHTML = "";
+                    }
+                    list.prepend(li);
+                }
 
                 // Re-activar handlers de editar y eliminar
                 if (typeof editarRecompensa === "function") editarRecompensa();
@@ -1132,6 +1156,7 @@ function crearRecompensa() {
         }
     });
 }
+
 
 function asegurarMensajeVacio(listId, placeholderId, mensaje) {
     const lista = document.getElementById(listId);

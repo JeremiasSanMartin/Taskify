@@ -46,7 +46,9 @@ $stmt = $conn->prepare("
            u.nombre AS asignado, t.asignadoA AS asignado_id
     FROM tarea t
     LEFT JOIN usuario u ON t.asignadoA = u.id_usuario
-    WHERE t.grupo_id = :grupo_id AND t.estado = 'pendiente'
+    WHERE t.grupo_id = :grupo_id 
+      AND t.estado = 'pendiente'
+      AND t.activa = 1
     ORDER BY t.fecha_limite ASC
 ");
 $stmt->execute([':grupo_id' => $id_grupo]);
@@ -59,7 +61,9 @@ $stmt = $conn->prepare("
            u.nombre AS asignado, t.asignadoA AS asignado_id
     FROM tarea t
     LEFT JOIN usuario u ON t.asignadoA = u.id_usuario
-    WHERE t.grupo_id = :grupo_id AND t.estado = 'realizada'
+    WHERE t.grupo_id = :grupo_id 
+      AND t.estado = 'realizada'
+      AND t.activa = 1
     ORDER BY t.fecha_entrega DESC, t.fecha_limite ASC
 ");
 $stmt->execute([':grupo_id' => $id_grupo]);

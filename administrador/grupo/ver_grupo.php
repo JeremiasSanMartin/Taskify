@@ -169,7 +169,7 @@ $userEmail = htmlspecialchars($_SESSION['email']);
             <?php endif; ?>
 
             <!-- Columna derecha: botones -->
-            <div class="d-flex align-items-center gap-2">
+            <div class="w-100 d-flex justify-content-center mt-3">
                 <button id="btn-recargar" class="btn btn-primary btn-lg">
                     <i class="bi bi-arrow-clockwise"></i> Recargar datos
                 </button>

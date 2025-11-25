@@ -106,10 +106,6 @@ if ($userEmail) {
                 <i class="bi bi-people-fill"></i>
                 <span>Mis Grupos</span>
             </a>
-            <a href="#" class="menu-item" data-section="notificaciones">
-                <i class="bi bi-bell-fill"></i>
-                <span>Notificaciones</span>
-            </a>
         </div>
 
         <!-- Footer -->
@@ -155,7 +151,6 @@ if ($userEmail) {
                 <div class="content-card">
                     <div class="card-header">
                         <h3 class="card-title">Mis Grupos (Propietario)</h3>
-                        <a href="#" class="card-action">Gestionar todos</a>
                     </div>
                     <div class="groups-grid" data-section="colaborador">
                         <?php if (empty($grupos_propios)): ?>
