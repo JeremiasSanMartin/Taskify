@@ -56,9 +56,10 @@ try {
     $puntosTarea = (int) $tareaData['puntos'];
 
     if ($rol === 'administrador') {
+        // Usuario elegido: puede venir por POST o ser el asignado actual
         $usuarioElegido = $_POST['usuario_id'] ?? $usuarioAsignado ?? $id_usuario;
 
-        // Actualizar tarea
+        // Actualizar tarea: se marca como aprobada y se asigna al colaborador elegido
         $stmt = $conn->prepare("
         UPDATE tarea
         SET estado = 'aprobada', fecha_entrega = NOW(), asignadoA = :uid
@@ -70,26 +71,33 @@ try {
             ':gid' => $id_grupo
         ]);
 
-        // Obtener grupo_usuario_id del usuario elegido
+        // Obtener grupo_usuario_id del colaborador elegido (beneficiario)
         $stmt = $conn->prepare("SELECT id_grupo_usuario 
                             FROM grupousuario 
                             WHERE grupo_id = :gid AND usuario_id = :uid");
         $stmt->execute([':gid' => $id_grupo, ':uid' => $usuarioElegido]);
         $grupo_usuario_destino = $stmt->fetchColumn();
 
-        // Insertar en historial
+        // Obtener grupo_usuario_id del admin (actor)
+        $stmt = $conn->prepare("SELECT id_grupo_usuario 
+                            FROM grupousuario 
+                            WHERE grupo_id = :gid AND usuario_id = :uid");
+        $stmt->execute([':gid' => $id_grupo, ':uid' => $id_usuario]); // el admin logueado
+        $grupo_usuario_admin = $stmt->fetchColumn();
+
+        // Insertar en historial con el admin como actor
         $stmt = $conn->prepare("
         INSERT INTO historialgrupousuario
         (fecha, puntosOtorgados, puntosCanjeados, estadoTarea, grupo_usuario_id, tarea_id_tarea, recompensa_id_recompensa)
-        VALUES (NOW(), :puntos, NULL, 2, :grupo_usuario_id, :tarea_id, NULL)
+        VALUES (NOW(), :puntos, NULL, 2, :grupo_usuario_id_admin, :tarea_id, NULL)
     ");
         $stmt->execute([
             ':puntos' => $puntosTarea,
-            ':grupo_usuario_id' => $grupo_usuario_destino,
+            ':grupo_usuario_id_admin' => $grupo_usuario_admin,
             ':tarea_id' => $id_tarea
         ]);
 
-        // 👉 Actualizar puntaje acumulado
+        // Actualizar puntaje acumulado del colaborador
         $stmt = $conn->prepare("
         UPDATE grupousuario
         SET puntos = puntos + :puntos
@@ -104,23 +112,22 @@ try {
     } else {
         // Colaborador: marca como realizada y se asigna automáticamente
         $stmt = $conn->prepare("
-            UPDATE tarea
-            SET estado = 'realizada', fecha_entrega = NOW(), asignadoA = :uid
-            WHERE id_tarea = :tid AND grupo_id = :gid
-        ");
+        UPDATE tarea
+        SET estado = 'realizada', fecha_entrega = NOW(), asignadoA = :uid
+        WHERE id_tarea = :tid AND grupo_id = :gid
+    ");
         $stmt->execute([
             ':uid' => $id_usuario,
             ':tid' => $id_tarea,
             ':gid' => $id_grupo
         ]);
 
-
         // Insertar en historial con estadoTarea = 1 (realizada)
         $stmt = $conn->prepare("
-            INSERT INTO historialgrupousuario
-            (fecha, puntosOtorgados, puntosCanjeados, estadoTarea, grupo_usuario_id, tarea_id_tarea, recompensa_id_recompensa)
-            VALUES (NOW(), 0, NULL, 1, :grupo_usuario_id, :tarea_id, NULL)
-        ");
+        INSERT INTO historialgrupousuario
+        (fecha, puntosOtorgados, puntosCanjeados, estadoTarea, grupo_usuario_id, tarea_id_tarea, recompensa_id_recompensa)
+        VALUES (NOW(), 0, NULL, 1, :grupo_usuario_id, :tarea_id, NULL)
+    ");
         $stmt->execute([
             ':grupo_usuario_id' => $grupo_usuario_id,
             ':tarea_id' => $id_tarea
@@ -128,6 +135,7 @@ try {
 
         echo json_encode(['success' => true, 'estado' => 'realizada', 'id_tarea' => $id_tarea]);
     }
+
 } catch (PDOException $e) {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);

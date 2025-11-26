@@ -873,11 +873,18 @@ function renderizarHistorial(historial) {
         }
 
         const titulo = h.recompensa || h.tarea || 'Sin título';
-        const puntos = h.puntosOtorgados > 0
-            ? `<span class="badge bg-success">${h.puntosOtorgados} pts</span>`
-            : h.puntosCanjeados > 0
-                ? `<span class="badge bg-warning text-dark">${h.puntosCanjeados} pts canjeados</span>`
-                : "-";
+
+        let puntos = "-";
+        if (h.puntosOtorgados > 0) {
+            // si es aprobación de tarea, mostrar también el asignado
+            if (parseInt(h.estadoTarea) === 2 && h.asignado) {
+                puntos = `<span class="badge bg-success">${h.puntosOtorgados} pts para ${h.asignado}</span>`;
+            } else {
+                puntos = `<span class="badge bg-success">${h.puntosOtorgados} pts</span>`;
+            }
+        } else if (h.puntosCanjeados > 0) {
+            puntos = `<span class="badge bg-warning text-dark">${h.puntosCanjeados} pts canjeados</span>`;
+        }
 
         html += `
             <tr>
@@ -893,6 +900,7 @@ function renderizarHistorial(historial) {
     html += "</tbody></table>";
     contenedor.innerHTML = html;
 }
+
 
 function renderizarAprobarTareas(tareas_realizadas) {
     const lista = document.getElementById("approve-task-list");

@@ -72,11 +72,15 @@ $tareas_realizadas = $stmt->fetchAll(PDO::FETCH_ASSOC);
 // 🔹 Historial del grupo
 $stmt = $conn->prepare("
     SELECT h.id_historialGrupoUsuario, h.fecha, h.puntosOtorgados, h.puntosCanjeados, h.estadoTarea,
-           u.nombre AS usuario, t.titulo AS tarea, r.nombre AS recompensa
+           u.nombre AS usuario, 
+           t.titulo AS tarea, 
+           r.nombre AS recompensa,
+           ua.nombre AS asignado
     FROM historialgrupousuario h
     LEFT JOIN grupousuario gu ON h.grupo_usuario_id = gu.id_grupo_usuario
-    LEFT JOIN usuario u ON gu.usuario_id = u.id_usuario
+    LEFT JOIN usuario u ON gu.usuario_id = u.id_usuario          -- el que ejecuta la acción (admin)
     LEFT JOIN tarea t ON h.tarea_id_tarea = t.id_tarea
+    LEFT JOIN usuario ua ON t.asignadoA = ua.id_usuario          -- el colaborador asignado
     LEFT JOIN recompensa r ON h.recompensa_id_recompensa = r.id_recompensa
     WHERE gu.grupo_id = :grupo_id
     ORDER BY h.fecha DESC, h.id_historialGrupoUsuario DESC
