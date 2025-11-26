@@ -4,35 +4,70 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function initGroupPage() {
-
     const role = document.body.dataset.role || "colaborador";
 
     if (role === "admin") {
+        // Solo en admin existe el modal y el form
+        const form = document.getElementById("formCompletarTarea");
+        if (form) {
+            form.addEventListener("submit", async (e) => {
+                e.preventDefault();
+
+                const idTarea = document.getElementById("completar-id-tarea").value;
+                const idGrupo = document.getElementById("completar-id-grupo").value;
+                const usuarioElegido = document.getElementById("usuario_id").value;
+
+                const res = await fetch("../../administrador/tareas/completar_tarea.php", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: new URLSearchParams({
+                        id_tarea: idTarea,
+                        id_grupo: idGrupo,
+                        usuario_id: usuarioElegido // beneficiario elegido
+                    })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    const modalEl = document.getElementById("modalCompletarTarea");
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                    refrescarTodoConBoton();
+                } else {
+                    alert(data.error || "Error al completar tarea");
+                }
+            });
+        }
+
+        // Configuración específica de admin
         cargarConfiguracionAdministrador();
         editarGrupoDesdeConfiguracion();
         sincronizarModalEditarGrupo();
     } else {
+        // Configuración específica de colaborador
         cargarConfiguracionColaborador();
     }
+
     refrescarTodoConBoton();
 
-    //MIEMBROS
+    // MIEMBROS
     handleSidebarNavigation();
     manejarSidebarResponsivo();
     configurarModalExpulsion();
     mostrarToastExpulsion();
     configurarBotonCopiarCodigo();
 
-    //TAREAS
+    // TAREAS
     crearTareaConModal();
     configurarModalEliminarTarea();
     configurarModalEditarTarea();
     editarTareaConModal();
     eliminarTareaConModal();
-    configurarBotonCompletarTarea();
-    configurarBotonesAprobarRechazar()
+    //carga el boton de las tareas
+    cargarGrupo();
+    configurarBotonesAprobarRechazar();
 
-    //RECOMPENSAS
+    // RECOMPENSAS
     crearRecompensa();
     controlFormCrearRecompensa();
     prellenarModalEditarRecompensa();
@@ -42,6 +77,27 @@ function initGroupPage() {
     canjearRecompensa();
     mostrarAlerta();
 }
+
+
+async function cargarGrupo() {
+    const idGrupo = new URLSearchParams(window.location.search).get("id");
+    const res = await fetch(`../../administrador/grupo/grupo_ajax.php?id=${idGrupo}`);
+    const data = await res.json();
+
+    if (!data.success) {
+        console.error("Error cargando grupo:", data.error);
+        return;
+    }
+
+    // Guardás los datos globales
+    window.grupoData = data;
+    window.esAdmin = data.isAdmin;          // true o false
+    window.usuarioId = data.usuarioId;      // id del usuario en sesión
+
+    // Ahora ya podés diferenciar el flujo
+    configurarBotonCompletarTarea();
+}
+
 
 // --- Navegación lateral ---
 function handleSidebarNavigation() {
@@ -511,7 +567,6 @@ function configurarBotonCompletarTarea() {
     const taskList = document.getElementById("task-list");
     if (!taskList) return;
 
-    // click en botón completar
     taskList.addEventListener("click", async (e) => {
         const btn = e.target.closest(".complete-task-btn");
         if (!btn) return;
@@ -524,13 +579,13 @@ function configurarBotonCompletarTarea() {
             return;
         }
 
-        try {
+        if (window.esAdmin) {
+            // 🔹 ADMIN: abrir modal y poblar select
             const res = await fetch(`../../administrador/grupo/getUsuariosGrupo.php?id_grupo=${idGrupo}`);
             const usuarios = await res.json();
 
             const select = document.getElementById("usuario_id");
             select.innerHTML = "";
-
             usuarios.forEach(u => {
                 const opt = document.createElement("option");
                 opt.value = u.id_usuario;
@@ -542,45 +597,26 @@ function configurarBotonCompletarTarea() {
             document.getElementById("completar-id-tarea").value = idTarea;
             document.getElementById("completar-id-grupo").value = idGrupo;
 
-            if (usuarios.length === 1) {
-                completarTareaDirecto(idTarea, idGrupo, usuarios[0].id_usuario);
-            } else {
-                const modal = new bootstrap.Modal(document.getElementById("modalCompletarTarea"));
-                modal.show();
-            }
-        } catch (err) {
-            console.error("Error cargando usuarios del grupo:", err);
+            new bootstrap.Modal(document.getElementById("modalCompletarTarea")).show();
+        } else {
+            // 🔹 COLABORADOR: completa directo usando sesión
+            completarTareaComoColaborador(idTarea, idGrupo);
         }
     });
-
-    const formCompletar = document.getElementById("formCompletarTarea");
-    if (formCompletar) {
-        formCompletar.addEventListener("submit", (e) => {
-            e.preventDefault();
-            const idTarea = document.getElementById("completar-id-tarea").value;
-            const idGrupo = document.getElementById("completar-id-grupo").value;
-            const usuarioId = document.getElementById("usuario_id").value;
-
-            completarTareaDirecto(idTarea, idGrupo, usuarioId);
-        });
-    }
 }
 
 
-function completarTareaDirecto(idTarea, idGrupo, usuarioId) {
+
+function completarTareaComoColaborador(idTarea, idGrupo) {
     fetch("../../administrador/tareas/completar_tarea.php", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: `id_tarea=${encodeURIComponent(idTarea)}&id_grupo=${encodeURIComponent(idGrupo)}&usuario_id=${encodeURIComponent(usuarioId)}`
+        body: new URLSearchParams({ id_tarea: idTarea, id_grupo: idGrupo })
     })
         .then(res => res.json())
         .then(data => {
-            console.log("Respuesta completar_tarea:", data);
             if (data.success) {
                 refrescarTodoConBoton();
-                const modalEl = document.getElementById("modalCompletarTarea");
-                const modal = bootstrap.Modal.getInstance(modalEl);
-                if (modal) modal.hide();
             } else {
                 alert(data.error || "Error al completar tarea");
             }

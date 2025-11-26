@@ -61,6 +61,7 @@ $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if ($user) {
     // Ya existe → guardar datos en sesión y redirigir al dashboard
+    $_SESSION['id_usuario'] = $user['id_usuario'];   // 🔹 añade esto
     $_SESSION['nombre'] = $user['nombre'];
     $_SESSION['fecha_nacimiento'] = $user['fecha_nacimiento'];
     header("Location: ../index.php");
