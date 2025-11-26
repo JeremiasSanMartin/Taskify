@@ -77,6 +77,21 @@ try {
     $stmt = $conn->prepare("UPDATE grupousuario SET puntos = :puntos WHERE id_grupo_usuario = :gu_id");
     $stmt->execute([':puntos' => $nuevo_puntaje, ':gu_id' => $id_grupo_usuario]);
 
+    // Insertar en historial
+    $stmt = $conn->prepare("
+    INSERT INTO historialgrupousuario (
+        fecha, puntosOtorgados, puntosCanjeados, estadoTarea,
+        grupo_usuario_id, recompensa_id_recompensa
+    ) VALUES (
+        NOW(), 0, :canjeados, 13, :grupo_usuario_id, :recompensa_id
+    )
+    ");
+    $stmt->execute([
+        ':canjeados' => $costo,
+        ':grupo_usuario_id' => $id_grupo_usuario,
+        ':recompensa_id' => $id_recompensa
+    ]);
+
     echo json_encode([
         'success' => true,
         'id_recompensa' => $id_recompensa,
