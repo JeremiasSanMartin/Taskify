@@ -203,7 +203,7 @@ $userEmail = htmlspecialchars($_SESSION['email']);
             </div>
 
             <!-- Recompensas -->
-            <div id="recompensas-section" class="content-section">
+            <div id="recompensas-section" data-grupo="<?= $id_grupo ?>" class="content-section">
                 <div class="content-card p-3">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h3><i class="bi bi-gift-fill"></i> Recompensas</h3>
@@ -211,9 +211,11 @@ $userEmail = htmlspecialchars($_SESSION['email']);
                             <i class="bi bi-plus-circle"></i> Crear Recompensa
                         </button>
                     </div>
-
-                    <ul id="reward-list" class="list-group mt-4">
-                    </ul>
+                    <p><strong>Mis puntos:</strong>
+                        <span id="puntos-admin" class="badge bg-success fs-5 px-3 py-2 rounded-pill shadow-sm">0</span>
+                        pts
+                    </p>
+                    <ul id="reward-list" class="list-group mt-4"></ul>
                 </div>
             </div>
 
@@ -519,6 +521,30 @@ $userEmail = htmlspecialchars($_SESSION['email']);
         </div>
     </div>
 
+    <!-- Modal Completar Tarea -->
+    <div class="modal fade" id="modalCompletarTarea" tabindex="-1">
+        <div class="modal-dialog">
+            <form id="formCompletarTarea">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Completar tarea</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="id_tarea" id="completar-id-tarea">
+                        <input type="hidden" name="id_grupo" id="completar-id-grupo">
+                        <label for="usuario_id">¿Quién completó esta tarea?</label>
+                        <select name="usuario_id" id="usuario_id" class="form-select"></select>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success">Completar</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
     <!-- Modal: Crear recompensa -->
     <div class="modal fade" id="modalCrearRecompensa" tabindex="-1" aria-labelledby="crearRecompensaLabel"
         aria-hidden="true">
@@ -616,6 +642,29 @@ $userEmail = htmlspecialchars($_SESSION['email']);
         </div>
     </div>
 
+    <!-- Modal confirmar canje -->
+    <div class="modal fade" id="modalConfirmCanje" tabindex="-1" aria-labelledby="modalConfirmCanjeLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title" id="modalConfirmCanjeLabel"><i class="bi bi-cart-check"></i> Confirmar canje
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="modalConfirmMensaje" class="mb-0"></p>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btnConfirmarCanje">
+                        <span class="spinner-border spinner-border-sm me-2 d-none" id="spinnerConfirmCanje"></span>
+                        Confirmar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal de confirmación de eliminación -->
     <div class="modal fade" id="modalEliminarRecompensa" tabindex="-1" aria-hidden="true">

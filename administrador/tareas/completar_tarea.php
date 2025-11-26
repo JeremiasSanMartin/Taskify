@@ -56,24 +56,48 @@ try {
     $puntosTarea = (int) $tareaData['puntos'];
 
     if ($rol === 'administrador') {
-        // Admin aprueba directamente
-        $stmt = $conn->prepare("
-            UPDATE tarea
-            SET estado = 'aprobada', fecha_entrega = NOW()
-            WHERE id_tarea = :tid AND grupo_id = :gid
-        ");
-        $stmt->execute([':tid' => $id_tarea, ':gid' => $id_grupo]);
+        $usuarioElegido = $_POST['usuario_id'] ?? $usuarioAsignado ?? $id_usuario;
 
-        // Insertar en historial con estadoTarea = 2 (aprobada)
+        // Actualizar tarea
         $stmt = $conn->prepare("
-            INSERT INTO historialgrupousuario
-            (fecha, puntosOtorgados, puntosCanjeados, estadoTarea, grupo_usuario_id, tarea_id_tarea, recompensa_id_recompensa)
-            VALUES (NOW(), :puntos, NULL, 2, :grupo_usuario_id, :tarea_id, NULL)
-        ");
+        UPDATE tarea
+        SET estado = 'aprobada', fecha_entrega = NOW(), asignadoA = :uid
+        WHERE id_tarea = :tid AND grupo_id = :gid
+    ");
+        $stmt->execute([
+            ':uid' => $usuarioElegido,
+            ':tid' => $id_tarea,
+            ':gid' => $id_grupo
+        ]);
+
+        // Obtener grupo_usuario_id del usuario elegido
+        $stmt = $conn->prepare("SELECT id_grupo_usuario 
+                            FROM grupousuario 
+                            WHERE grupo_id = :gid AND usuario_id = :uid");
+        $stmt->execute([':gid' => $id_grupo, ':uid' => $usuarioElegido]);
+        $grupo_usuario_destino = $stmt->fetchColumn();
+
+        // Insertar en historial
+        $stmt = $conn->prepare("
+        INSERT INTO historialgrupousuario
+        (fecha, puntosOtorgados, puntosCanjeados, estadoTarea, grupo_usuario_id, tarea_id_tarea, recompensa_id_recompensa)
+        VALUES (NOW(), :puntos, NULL, 2, :grupo_usuario_id, :tarea_id, NULL)
+    ");
         $stmt->execute([
             ':puntos' => $puntosTarea,
-            ':grupo_usuario_id' => $grupo_usuario_id,
+            ':grupo_usuario_id' => $grupo_usuario_destino,
             ':tarea_id' => $id_tarea
+        ]);
+
+        // 👉 Actualizar puntaje acumulado
+        $stmt = $conn->prepare("
+        UPDATE grupousuario
+        SET puntos = puntos + :puntos
+        WHERE id_grupo_usuario = :grupo_usuario_id
+    ");
+        $stmt->execute([
+            ':puntos' => $puntosTarea,
+            ':grupo_usuario_id' => $grupo_usuario_destino
         ]);
 
         echo json_encode(['success' => true, 'estado' => 'aprobada', 'id_tarea' => $id_tarea]);

@@ -511,7 +511,8 @@ function configurarBotonCompletarTarea() {
     const taskList = document.getElementById("task-list");
     if (!taskList) return;
 
-    taskList.addEventListener("click", (e) => {
+    // click en botón completar
+    taskList.addEventListener("click", async (e) => {
         const btn = e.target.closest(".complete-task-btn");
         if (!btn) return;
 
@@ -523,24 +524,70 @@ function configurarBotonCompletarTarea() {
             return;
         }
 
-        fetch("../../administrador/tareas/completar_tarea.php", {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: `id_tarea=${encodeURIComponent(idTarea)}&id_grupo=${encodeURIComponent(idGrupo)}`
-        })
-            .then(res => res.json())
-            .then(data => {
-                console.log("Respuesta completar_tarea:", data);
-                if (data.success) {
-                    // refrescar lista sin recargar toda la página
-                    refrescarTodoConBoton();
-                } else {
-                    alert(data.error || "Error al completar tarea");
-                }
-            })
-            .catch(err => console.error("Error al completar tarea:", err));
+        try {
+            const res = await fetch(`../../administrador/grupo/getUsuariosGrupo.php?id_grupo=${idGrupo}`);
+            const usuarios = await res.json();
+
+            const select = document.getElementById("usuario_id");
+            select.innerHTML = "";
+
+            usuarios.forEach(u => {
+                const opt = document.createElement("option");
+                opt.value = u.id_usuario;
+                opt.textContent = u.nombre;
+                if (u.id_usuario == btn.dataset.asignado) opt.selected = true;
+                select.appendChild(opt);
+            });
+
+            document.getElementById("completar-id-tarea").value = idTarea;
+            document.getElementById("completar-id-grupo").value = idGrupo;
+
+            if (usuarios.length === 1) {
+                completarTareaDirecto(idTarea, idGrupo, usuarios[0].id_usuario);
+            } else {
+                const modal = new bootstrap.Modal(document.getElementById("modalCompletarTarea"));
+                modal.show();
+            }
+        } catch (err) {
+            console.error("Error cargando usuarios del grupo:", err);
+        }
     });
+
+    const formCompletar = document.getElementById("formCompletarTarea");
+    if (formCompletar) {
+        formCompletar.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const idTarea = document.getElementById("completar-id-tarea").value;
+            const idGrupo = document.getElementById("completar-id-grupo").value;
+            const usuarioId = document.getElementById("usuario_id").value;
+
+            completarTareaDirecto(idTarea, idGrupo, usuarioId);
+        });
+    }
 }
+
+
+function completarTareaDirecto(idTarea, idGrupo, usuarioId) {
+    fetch("../../administrador/tareas/completar_tarea.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `id_tarea=${encodeURIComponent(idTarea)}&id_grupo=${encodeURIComponent(idGrupo)}&usuario_id=${encodeURIComponent(usuarioId)}`
+    })
+        .then(res => res.json())
+        .then(data => {
+            console.log("Respuesta completar_tarea:", data);
+            if (data.success) {
+                refrescarTodoConBoton();
+                const modalEl = document.getElementById("modalCompletarTarea");
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            } else {
+                alert(data.error || "Error al completar tarea");
+            }
+        })
+        .catch(err => console.error("Error al completar tarea:", err));
+}
+
 function configurarBotonesAprobarRechazar() {
     const lista = document.getElementById("approve-task-list");
     if (!lista) return;
@@ -714,26 +761,24 @@ function renderizarTareas(tareas, isAdmin, usuarioId) {
     });
 }
 
-
-
 function renderizarRecompensas(recompensas, isAdmin) {
     const lista = document.getElementById("reward-list");
     if (!lista) return;
 
     lista.innerHTML = "";
 
-    // Normalizar: si no es array, convertir a vacío
     if (!Array.isArray(recompensas)) {
         recompensas = [];
     }
 
-    // Filtrar recompensas visibles (descartar eliminadas)
     const visibles = recompensas.filter(r => r.disponibilidad != -1);
 
     if (visibles.length === 0) {
         lista.innerHTML = "<li class='list-group-item text-muted'>No hay recompensas disponibles.</li>";
         return;
     }
+
+    const grupoId = document.getElementById("recompensas-section")?.dataset.grupo || "";
 
     visibles.forEach(r => {
         const li = document.createElement("li");
@@ -750,17 +795,22 @@ function renderizarRecompensas(recompensas, isAdmin) {
                     data-disponibilidad="${r.disponibilidad}">
                     <i class="bi bi-pencil-square"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-danger admin-only" title="Eliminar"
+                <button class="btn btn-sm btn-outline-danger admin-only me-1" title="Eliminar"
                     data-id="${r.id_recompensa}" data-nombre="${r.titulo}"
                     data-bs-toggle="modal" data-bs-target="#modalEliminarRecompensa"
                     ${r.disponibilidad == 0 ? 'disabled' : ''}>
                     <i class="bi bi-trash"></i>
                 </button>
+                <button class="btn btn-sm btn-outline-success mt-2 mt-md-0 canjear-btn"
+                    data-id="${r.id_recompensa}" data-nombre="${r.titulo}" data-grupo="${grupoId}"
+                    ${r.disponibilidad <= 0 ? 'disabled' : ''}>
+                    <i class="bi bi-cart-check"></i> Canjear
+                </button>
             `;
         } else {
             acciones = `
-                <button class="btn btn-sm btn-outline-primary mt-2 mt-md-0" title="Canjear"
-                    data-id="${r.id_recompensa}" data-nombre="${r.titulo}"
+                <button class="btn btn-sm btn-outline-primary mt-2 mt-md-0 canjear-btn"
+                    data-id="${r.id_recompensa}" data-nombre="${r.titulo}" data-grupo="${grupoId}"
                     ${r.disponibilidad <= 0 ? 'disabled' : ''}>
                     <i class="bi bi-cart-check"></i> Canjear
                 </button>
@@ -782,8 +832,6 @@ function renderizarRecompensas(recompensas, isAdmin) {
         lista.appendChild(li);
     });
 }
-
-
 
 function renderizarHistorial(historial) {
     const contenedor = document.getElementById("historial-list");
@@ -1202,18 +1250,16 @@ function controlFormCrearRecompensa() {
 }
 
 function canjearRecompensa() {
-    const grupoIdFromServer = document.getElementById("recompensas-section").dataset.grupo;
+    const grupoIdFromServer = document.getElementById("recompensas-section")?.dataset.grupo || "";
     const rewardList = document.getElementById("reward-list");
     if (!rewardList) return;
 
     rewardList.addEventListener("click", (e) => {
-        const btn = e.target.closest("button[title='Canjear']");
+        const btn = e.target.closest(".canjear-btn");
         if (!btn) return;
 
         const idRecompensa = btn.dataset.id;
         const nombre = btn.dataset.nombre;
-
-        // usar el grupo global si el botón no lo trae
         const idGrupo = btn.dataset.grupo || grupoIdFromServer;
 
         abrirModalConfirmCanje(nombre, async () => {
@@ -1234,17 +1280,15 @@ function canjearRecompensa() {
 
                     // Actualizar stock visualmente
                     const stockSpan = btn.closest("li").querySelector(".stock-span");
-                    if (stockSpan) {
-                        stockSpan.textContent = data.nuevo_stock;
-                    }
+                    if (stockSpan) stockSpan.textContent = data.nuevo_stock;
 
-                    // Actualizar puntos del colaborador
-                    const puntosSpan = document.getElementById("puntos-colaborador");
-                    if (puntosSpan) {
-                        puntosSpan.textContent = data.puntos_restantes;
-                    }
+                    // Actualizar puntos del colaborador y admin
+                    const puntosColab = document.getElementById("puntos-colaborador");
+                    const puntosAdmin = document.getElementById("puntos-admin");
+                    if (puntosColab) puntosColab.textContent = data.puntos_restantes;
+                    if (puntosAdmin) puntosAdmin.textContent = data.puntos_restantes;
 
-                    // Opcional: deshabilitar el botón si stock llega a 0
+                    // Deshabilitar si stock llega a 0
                     if (data.nuevo_stock <= 0) {
                         btn.disabled = true;
                         btn.innerHTML = `<i class="bi bi-cart-x"></i> Agotado`;
@@ -1252,8 +1296,6 @@ function canjearRecompensa() {
                 } else {
                     mostrarAlerta("❌ " + (data.error || "No se pudo canjear la recompensa"), "danger");
                 }
-
-
             } catch (err) {
                 console.error("Error en canjearRecompensa:", err);
                 mostrarAlerta("❌ Error inesperado al canjear", "danger");
@@ -1355,6 +1397,11 @@ function refrescarTodoConBoton() {
                 const puntosSpan = document.getElementById("puntos-colaborador");
                 if (puntosSpan) {
                     puntosSpan.textContent = data.puntos;
+                }
+                // Actualizar puntaje del admin si existe el span
+                const puntosAdmin = document.getElementById("puntos-admin");
+                if (puntosAdmin) {
+                    puntosAdmin.textContent = data.puntos;
                 }
 
                 // 🔹 Actualizar badge de aprobar tareas en el sidebar
