@@ -57,7 +57,7 @@ $userEmail = htmlspecialchars($_SESSION['email']);
     <link rel="stylesheet" href="../../assets/css/group.css" />
 </head>
 
-<body class="dashboard-body" data-role="colaborador">
+<body class="dashboard-body-colaborador" data-role="colaborador">
     <!-- Sidebar -->
     <nav class="sidebar" id="main-sidebar">
         <div class="sidebar-header d-flex align-items-center justify-content-between">
