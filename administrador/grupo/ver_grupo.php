@@ -96,7 +96,7 @@ $userEmail = htmlspecialchars($_SESSION['email']);
     <link rel="stylesheet" href="../../assets/css/group.css">
 </head>
 
-<body class="dashboard-body" data-role="admin">
+<body class="dashboard-body-administrador" data-role="admin">
 
 
     <!-- Sidebar -->
