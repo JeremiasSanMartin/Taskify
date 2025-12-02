@@ -1,5 +1,4 @@
 /vendor/
-/.env
+/auth/.env
 .DS_Store
-composer.json
-composer.lock
+db_config.php

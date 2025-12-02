@@ -4,23 +4,18 @@ window.onload = function () {
   manejarNavegacionSidebar();
   manejarSidebarResponsivo();
   handleGroupCards();
-
-  // --- Cierre de sesión ---
-  document.addEventListener("click", (e) => {
-    if (e.target.closest(".logout-btn")) {
-      console.log("[v1] Botón de cerrar sesión clickeado");
-      if (confirm("¿Estás seguro de que quieres cerrar sesión?")) {
-        window.location.href = "../index.html";
-      }
-    }
-  });
+  mantenerSeccion();
 };
 
 // --- Función: inicialización del dashboard ---
 function inicializarDashboard() {
   console.log("[v1] Dashboard inicializado");
-  // Mostrar por defecto la sección de grupos
-  mostrarSeccion("grupos");
+
+  // Si no hay sección guardada, mostrar por defecto "grupos"
+  const lastSection = localStorage.getItem("seccionActiva");
+  if (!lastSection) {
+    mostrarSeccion("grupos");
+  }
 }
 
 // --- Función: navegación del sidebar ---
@@ -41,6 +36,9 @@ function manejarNavegacionSidebar() {
       let seccion = item.getAttribute("data-section");
       mostrarSeccion(seccion);
 
+      // Guardar en localStorage
+      localStorage.setItem("seccionActiva", seccion);
+
       console.log(`[v1] Navegación hacia la sección: ${seccion}`);
     });
   });
@@ -49,29 +47,34 @@ function manejarNavegacionSidebar() {
 // --- Función: mostrar sección ---
 function mostrarSeccion(nombreSeccion) {
   // Ocultar todas las secciones
-  let secciones = document.querySelectorAll(".content-section");
-  secciones.forEach((seccion) => {
+  document.querySelectorAll(".content-section").forEach(seccion => {
     seccion.classList.remove("active");
+    seccion.style.display = "none";
   });
 
-  // Mostrar la sección seleccionada
+  // Buscar primero id con sufijo -section
   let seccionDestino = document.getElementById(`${nombreSeccion}-section`);
+  // Si no existe, usar id simple
+  if (!seccionDestino) {
+    seccionDestino = document.getElementById(nombreSeccion);
+  }
+
   if (seccionDestino) {
     seccionDestino.classList.add("active");
+    seccionDestino.style.display = "block";
   }
 
-  // Actualizar títulos de la página
-  let titulo = document.querySelector(".page-title");
-  let subtitulo = document.querySelector(".page-subtitle");
-
-  if (nombreSeccion === "grupos") {
-    titulo.textContent = "Mis Grupos";
-    subtitulo.textContent = "Gestiona tus grupos y colaboraciones";
-  } else if (nombreSeccion === "notificaciones") {
-    titulo.textContent = "Notificaciones";
-    subtitulo.textContent = "Mantente al día con las últimas actualizaciones";
+  // Actualizar títulos (igual que antes)
+  const titulo = document.querySelector(".page-title");
+  const subtitulo = document.querySelector(".page-subtitle");
+  if (titulo && subtitulo) {
+    if (nombreSeccion === "grupos") {
+      titulo.textContent = "Mis Grupos";
+      subtitulo.textContent = "Gestiona tus grupos y colaboraciones";
+    } 
   }
 }
+
 
 // --- Función: manejar sidebar responsivo ---
 function manejarSidebarResponsivo() {
@@ -139,12 +142,30 @@ function eliminarBotonMenuMovil() {
   }
 }
 
-// --- Función: para redirigir al grupo --- esto debe modificarse al añadir back
 function handleGroupCards() {
   document.addEventListener("click", (e) => {
     const card = e.target.closest(".group-card");
     if (!card) return;
-    const id = card.dataset.groupId || "demo";
-    window.location.href = `group.php?id=${encodeURIComponent(id)}`;
+
+    const id = card.dataset.groupId;
+    const section = card.closest(".groups-grid")?.dataset.section;
+
+    let folder = "";
+    if (section === "administrador") folder = "/administrador";
+    else if (section === "colaborador") folder = "/colaborador";
+
+    // Usa la ruta dinámica generada por PHP
+    if (folder) {
+      window.location.href = `${BASE_URL}${folder}/grupo/ver_grupo.php?id=${encodeURIComponent(id)}`;
+    } else {
+      console.warn("No se pudo determinar la sección del grupo clickeado");
+    }
   });
+}
+
+function mantenerSeccion() {
+  const lastSection = localStorage.getItem("seccionActiva");
+  if (lastSection) {
+    mostrarSeccion(lastSection);
+  }
 }
